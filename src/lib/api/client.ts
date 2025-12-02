@@ -130,3 +130,70 @@ export const apiSMTP = {
       body: JSON.stringify(config)
     })
 };
+
+// ============ PERFILES DE ENVÍO (SENDING PROFILES) ============
+export interface SendingProfileHeader {
+  key: string;
+  value: string;
+}
+
+export interface SendingProfile {
+  local_id: number;
+  gophish_id: number;
+  name: string;
+  interface_type: string;
+  from_address: string;
+  host: string;
+  username: string;
+  ignore_cert_errors: boolean;
+  headers: SendingProfileHeader[];
+  created_at: string;
+  modified_date: string;
+}
+
+export interface SendingProfileCreate {
+  name: string;
+  interface_type: string;
+  from_address: string;
+  host: string;
+  username: string;
+  password: string;
+  ignore_cert_errors: boolean;
+  headers?: SendingProfileHeader[];
+}
+
+export interface SendingProfileUpdate {
+  name?: string;
+  interface_type?: string;
+  from_address?: string;
+  host?: string;
+  username?: string;
+  password?: string;
+  ignore_cert_errors?: boolean;
+  headers?: SendingProfileHeader[];
+}
+
+export const apiSendingProfiles = {
+  list: (configId: number): Promise<SendingProfile[]> => 
+    apiFetch(`/gophish/${configId}/sending-profiles`),
+  
+  get: (configId: number, profileId: number): Promise<SendingProfile> => 
+    apiFetch(`/gophish/${configId}/sending-profiles/${profileId}`),
+  
+  create: (configId: number, data: SendingProfileCreate): Promise<SendingProfile> =>
+    apiFetch(`/gophish/${configId}/sending-profiles`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  
+  update: (configId: number, profileId: number, data: SendingProfileUpdate): Promise<SendingProfile> =>
+    apiFetch(`/gophish/${configId}/sending-profiles/${profileId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+  
+  delete: (configId: number, profileId: number): Promise<void> =>
+    apiFetch(`/gophish/${configId}/sending-profiles/${profileId}/remote`, {
+      method: 'DELETE'
+    })
+};

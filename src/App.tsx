@@ -12,6 +12,7 @@ import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
+import { SendingProfiles } from './components/sending/SendingProfiles';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -145,23 +146,7 @@ export default function App() {
           </div>
         );
       case 'sending':
-        return (
-          <div className="p-4 sm:p-6">
-            <h1 className="text-xl sm:text-2xl">Perfiles de Envío</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Gestión avanzada de perfiles SMTP en desarrollo...
-            </p>
-            <div className="mt-8 p-4 bg-muted rounded-lg">
-              <h3 className="font-medium mb-2">🔧 Funcionalidades Planificadas</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Configuración detallada de SMTP</li>
-                <li>• Pruebas de entregabilidad</li>
-                <li>• Monitoreo de reputación</li>
-                <li>• Rotación automática de servidores</li>
-              </ul>
-            </div>
-          </div>
-        );
+        return <SendingProfiles />;
       case 'management':
         return (
           <div className="p-4 sm:p-6">
