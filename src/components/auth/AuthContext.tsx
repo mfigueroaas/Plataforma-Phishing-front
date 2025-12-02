@@ -105,18 +105,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
                   id: backendProfile.id,
                   uid: backendProfile.firebase_uid,
                   email: backendProfile.email,
-                  name: backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
+                  // ⬇️ PRIORIZAR displayName de Firebase sobre backend
+                  name: firebaseUser.displayName || backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
                   role: backendProfile.role,
                   department: fsData?.department || 'Sin asignar',
                   lastLogin: new Date().toISOString(),
                 });
               } catch (apiError: any) {
                 console.error('[Auth] /users/me error:', apiError?.message || apiError);
-                // Fallback mínimo con Firebase
+                // Fallback con Firebase
                 setUser({
                   id: 0,
                   uid: firebaseUser.uid,
                   email: firebaseUser.email || '',
+                  // ⬇️ displayName de Firebase
                   name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
                   role: 'viewer',
                   department: fsData?.department || 'Sin asignar',
@@ -151,12 +153,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
               try {
                 const backendProfile = await apiUsers.me();
                 console.log('[Auth] /users/me on token refresh OK');
+                
+                // ⬇️ Obtener displayName actualizado de Firebase
+                const displayName = firebaseUser.displayName || backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario';
+                
                 setUser(prev => {
                   const base = prev || {
                     id: backendProfile.id,
                     uid: backendProfile.firebase_uid,
                     email: backendProfile.email,
-                    name: backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
+                    name: displayName,
                     department: 'Sin asignar',
                     lastLogin: new Date().toISOString(),
                   };
@@ -165,7 +171,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     id: backendProfile.id,
                     uid: backendProfile.firebase_uid,
                     email: backendProfile.email,
-                    name: backendProfile.name || base.name,
+                    name: displayName, // ⬅️ Firebase displayName
                     role: backendProfile.role,
                   };
                 });

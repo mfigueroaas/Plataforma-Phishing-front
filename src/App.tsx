@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from './components/auth/AuthContext'; // ⬅️ Usar contexto
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { CampaignList } from './components/campaigns/CampaignList';
@@ -12,82 +13,20 @@ import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
 
-/**
- * Aplicación principal con sistema de autenticación Firebase
- * 
- * Configuración Firebase requerida en /firebase/config.js:
- * 
- * import { initializeApp } from 'firebase/app';
- * import { getAuth } from 'firebase/auth';
- * 
- * const firebaseConfig = {
- *   apiKey: "tu-api-key",
- *   authDomain: "utem-ciberseguridad.firebaseapp.com",
- *   projectId: "utem-ciberseguridad",
- *   storageBucket: "utem-ciberseguridad.appspot.com",
- *   messagingSenderId: "123456789",
- *   appId: "1:123456789:web:abcdef123456"
- * };
- * 
- * const app = initializeApp(firebaseConfig);
- * export const auth = getAuth(app);
- */
-
-interface User {
-  uid: string;
-  email: string;
-  displayName: string;
-  role: string;
-  department: string;
-  lastLogin: string;
-}
-
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+  
+  // ⬇️ USAR AUTHCONTEXT en lugar de estado local
+  const { user, loading: authLoading, logout } = useAuth();
 
-  // Verificar autenticación con Firebase al cargar la app
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    (async () => {
-      const [{ onAuthStateChanged }, { auth }] = await Promise.all([
-        import('firebase/auth'),
-        import('./firebase/config')
-      ]);
-      unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (firebaseUser) {
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || 'Usuario UTEM',
-            role: 'user', // TODO: obtener de Firestore o custom claims
-            department: 'Ciberseguridad',
-            lastLogin: new Date().toISOString()
-          });
-        } else {
-          setUser(null);
-        }
-        setAuthLoading(false);
-      });
-    })();
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, []);
-
-  const handleLogin = (userData: User) => {
-    // Después de login, el listener de Firebase actualizará el estado.
-    setUser(userData);
-  };
+  // ⬇️ ELIMINAR useEffect de Firebase (ya está en AuthContext)
+  // ⬇️ ELIMINAR handleLogin (Login ya no lo necesita con AuthContext)
 
   const handleLogout = async () => {
-    const [{ signOut }, { auth }] = await Promise.all([
-      import('firebase/auth'),
-      import('./firebase/config')
-    ]);
-    await signOut(auth);
+    await logout();
     setCurrentPage('dashboard');
     setMobileMenuOpen(false);
   };
@@ -95,11 +34,10 @@ export default function App() {
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
     if (isMobile) {
-      setMobileMenuOpen(false); // Cerrar menú móvil al navegar
+      setMobileMenuOpen(false);
     }
   };
 
-  // Simulación de diferentes vistas basadas en URL params
   const urlParams = new URLSearchParams(window.location.search);
   const isLandingPage = urlParams.get('landing') === 'true';
   
@@ -107,7 +45,6 @@ export default function App() {
     return <LandingPage campaignId={urlParams.get('c') || 'demo'} userId={urlParams.get('u') || 'demo'} />;
   }
 
-  // Mostrar loading mientras se verifica la autenticación
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -119,9 +56,9 @@ export default function App() {
     );
   }
 
-  // Mostrar login si no hay usuario autenticado
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    // ⬇️ Login ahora usa AuthContext internamente
+    return <Login onLogin={() => {}} />;
   }
 
   const renderMainContent = () => {
@@ -235,7 +172,7 @@ export default function App() {
             <div className="mt-8 p-4 bg-muted rounded-lg">
               <h3 className="font-medium mb-2">🔧 Funcionalidades Planificadas</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Gestión de roles: autor, revisor, aprobador, admin</li>
+                <li>• Gestión de roles: viewer, operator, platform_admin</li>
                 <li>• Flujo de aprobaciones pendientes</li>
                 <li>• Auditoria de acciones</li>
                 <li>• Configuración de permisos granulares</li>
@@ -284,11 +221,9 @@ export default function App() {
     }
   };
 
-  // Versión móvil con Sheet/Drawer
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Header móvil */}
         <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between border-b">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -317,10 +252,9 @@ export default function App() {
             </div>
           </div>
           
-          <div className="w-10"></div> {/* Spacer para centrar el título */}
+          <div className="w-10"></div>
         </header>
 
-        {/* Contenido principal móvil */}
         <main className="overflow-auto">
           {renderMainContent()}
         </main>
@@ -328,7 +262,6 @@ export default function App() {
     );
   }
 
-  // Versión desktop
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar 

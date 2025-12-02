@@ -31,11 +31,12 @@ import {
 } from '../ui/dropdown-menu';
 
 interface User {
+  id: number;
   uid: string;
   email: string;
-  displayName: string;
-  role: string;
-  department: string;
+  name: string; // ⬅️ Cambio de displayName a name
+  role: 'viewer' | 'operator' | 'platform_admin';
+  department?: string;
   lastLogin: string;
 }
 
@@ -73,8 +74,8 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
 
   // Helper para obtener iniciales de forma segura
   const getUserInitials = () => {
-    if (!user?.displayName) return 'U';
-    return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+    if (!user?.name) return 'U';
+    return user.name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   return (
@@ -116,13 +117,13 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
                 className="w-full justify-start gap-3 text-left h-auto p-2 hover:bg-primary-foreground/20"
               >
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.displayName || 'User'}`} />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || 'User'}`} />
                   <AvatarFallback className="bg-secondary text-white text-xs">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary-foreground truncate">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-sm text-primary-foreground truncate">{user?.name || 'Usuario'}</p>
                   <p className="text-xs text-primary-foreground/70 truncate">{user?.department || 'Sin asignar'}</p>
                 </div>
               </Button>
@@ -131,7 +132,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm leading-none">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-sm leading-none">{user?.name || 'Usuario'}</p>
                   <p className="text-xs leading-none text-muted-foreground">{user?.email || '—'}</p>
                 </div>
               </DropdownMenuLabel>
@@ -173,7 +174,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
                 className="p-1.5 hover:bg-primary-foreground/20"
               >
                 <Avatar className="w-6 h-6">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.displayName || 'User'}`} />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || 'User'}`} />
                   <AvatarFallback className="bg-secondary text-white text-xs">
                     {getUserInitials()}
                   </AvatarFallback>
@@ -184,7 +185,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
             <DropdownMenuContent align="start" side="right" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm leading-none">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-sm leading-none">{user?.name || 'Usuario'}</p>
                   <p className="text-xs leading-none text-muted-foreground">{user?.email || '—'}</p>
                 </div>
               </DropdownMenuLabel>

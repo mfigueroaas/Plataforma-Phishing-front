@@ -35,7 +35,7 @@ import { Eye, EyeOff, Shield, Mail, Lock, AlertCircle, Loader2 } from 'lucide-re
  */
 
 interface LoginProps {
-  onLogin: (user: any) => void;
+  onLogin?: (user: any) => void; // ⬅️ Hacer opcional
   onError?: (error: string) => void;
 }
 
@@ -68,33 +68,17 @@ export function Login({ onLogin, onError }: LoginProps) {
     setError(null);
 
     try {
-      const [{
-        signInWithEmailAndPassword,
-        setPersistence,
-        browserLocalPersistence,
-        browserSessionPersistence
-      }, { auth }] = await Promise.all([
+      const [{ signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence }, { auth }] = await Promise.all([
         import('firebase/auth'),
         import('../../firebase/config')
       ]);
 
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      const u = userCredential.user;
-      onLogin({
-        uid: u.uid,
-        email: u.email,
-        name: u.displayName || u.email?.split('@')[0] || 'Usuario', // Cambio aquí
-        role: 'viewer', // Será sobrescrito por backend
-        department: 'Ciberseguridad',
-        lastLogin: new Date().toISOString(),
-        provider: 'email'
-      });
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      
+      // ⬇️ Ya NO llamamos onLogin, AuthContext manejará el estado
+      // El listener onAuthStateChanged detectará el login automáticamente
+      
     } catch (error: any) {
       console.error('Error en login:', error);
       
@@ -121,33 +105,22 @@ export function Login({ onLogin, onError }: LoginProps) {
     setError(null);
 
     try {
-      const [{ signInWithPopup, GoogleAuthProvider }, { auth }] = await Promise.all([
+      const [{ GoogleAuthProvider, signInWithPopup }, { auth }] = await Promise.all([
         import('firebase/auth'),
         import('../../firebase/config')
       ]);
+
       const provider = new GoogleAuthProvider();
       provider.addScope('email');
       provider.addScope('profile');
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      if (user.email && import.meta.env.VITE_GOOGLE_DOMAIN && !user.email.endsWith(`@${import.meta.env.VITE_GOOGLE_DOMAIN}`)) {
-        throw new Error('UTEM_DOMAIN_REQUIRED');
-      }
-
-      onLogin({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0] || 'Usuario',
-        role: 'user',
-        department: 'Ciberseguridad',
-        lastLogin: new Date().toISOString(),
-        provider: 'google'
-      });
+      await signInWithPopup(auth, provider);
+      
+      // ⬇️ Ya NO llamamos onLogin, AuthContext manejará el estado
+      
     } catch (error: any) {
-      console.error('Error en Google Sign-In:', error);
+      console.error('Error en Google login:', error);
       
       // Mapeo de errores específicos de Google Auth
       const errorMessages: Record<string, string> = {
