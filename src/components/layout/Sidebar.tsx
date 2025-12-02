@@ -71,6 +71,12 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
     { id: 'api', icon: FileText, label: 'Documentación API' },
   ];
 
+  // Helper para obtener iniciales de forma segura
+  const getUserInitials = () => {
+    if (!user?.displayName) return 'U';
+    return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <div className={`bg-primary text-primary-foreground transition-all duration-300 ${
       isMobile ? 'w-full' : (isCollapsed ? 'w-16' : 'w-64')
@@ -110,14 +116,14 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
                 className="w-full justify-start gap-3 text-left h-auto p-2 hover:bg-primary-foreground/20"
               >
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`} />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.displayName || 'User'}`} />
                   <AvatarFallback className="bg-secondary text-white text-xs">
-                    {user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary-foreground truncate">{user.displayName}</p>
-                  <p className="text-xs text-primary-foreground/70 truncate">{user.department}</p>
+                  <p className="text-sm text-primary-foreground truncate">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-xs text-primary-foreground/70 truncate">{user?.department || 'Sin asignar'}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -125,8 +131,8 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm leading-none">{user.displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  <p className="text-sm leading-none">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email || '—'}</p>
                 </div>
               </DropdownMenuLabel>
               
@@ -167,9 +173,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
                 className="p-1.5 hover:bg-primary-foreground/20"
               >
                 <Avatar className="w-6 h-6">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`} />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.displayName || 'User'}`} />
                   <AvatarFallback className="bg-secondary text-white text-xs">
-                    {user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -178,8 +184,8 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
             <DropdownMenuContent align="start" side="right" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm leading-none">{user.displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  <p className="text-sm leading-none">{user?.displayName || 'Usuario'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email || '—'}</p>
                 </div>
               </DropdownMenuLabel>
               
@@ -285,7 +291,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
       {/* Version */}
       {(!isCollapsed || isMobile) && (
         <div className="p-4 border-t border-primary-foreground/20 text-xs text-primary-foreground/70">
-          https://127.0.0.15333/landing_pages
+          v1.0.0
         </div>
       )}
     </div>

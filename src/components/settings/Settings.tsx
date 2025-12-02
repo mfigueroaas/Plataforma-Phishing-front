@@ -1,465 +1,277 @@
 import { useState } from 'react';
+import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { useAuth } from '../auth/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Switch } from '../ui/switch';
-import { 
-  Key, 
-  Mail, 
-  Globe, 
-  CheckCircle, 
-  XCircle,
-  AlertTriangle,
-  TestTube,
-  Plus,
-  Trash2,
-  Edit
-} from 'lucide-react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '../ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog';
-import { Textarea } from '../ui/textarea';
+import { Badge } from '../ui/badge';
+import { Server, Mail, Shield, Key, Plus, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 export function Settings() {
-  const [gophishApiKey, setGophishApiKey] = useState('gp_1234567890abcdef...');
-  const [gophishUrl, setGophishUrl] = useState('https://gophish.empresa.com');
-  const [testDomain, setTestDomain] = useState('phishing-test.empresa.com');
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+  const { user, canCreate, canEdit, canDelete, isAdmin } = useAuth();
+  const {
+    configs,
+    activeConfig,
+    loading: configLoading,
+    error: configError,
+    setActiveConfigId,
+    createConfig,
+    deleteConfig,
+    testConfig
+  } = useGoPhishConfig();
 
-  // Mock SMTP profiles
-  const [smtpProfiles, setSmtpProfiles] = useState([
-    {
-      id: 1,
-      name: 'SMTP Corporativo',
-      host: 'smtp.empresa.com',
-      port: 587,
-      username: 'noreply@empresa.com',
-      status: 'activo',
-      lastTest: '2024-01-20T10:30:00Z'
-    },
-    {
-      id: 2,
-      name: 'Servidor de Pruebas',
-      host: 'smtp.mailgun.com',
-      port: 587,
-      username: 'test@sandbox.mailgun.org',
-      status: 'activo',
-      lastTest: '2024-01-19T15:45:00Z'
-    },
-    {
-      id: 3,
-      name: 'Backup Gmail',
-      host: 'smtp.gmail.com',
-      port: 587,
-      username: 'backup@empresa.com',
-      status: 'inactivo',
-      lastTest: '2024-01-15T09:20:00Z'
+  const [newConfig, setNewConfig] = useState({ name: '', base_url: '', api_key: '' });
+  const [isCreating, setIsCreating] = useState(false);
+  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; status: number; snippet?: string; error?: string }>>({});
+  const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
+
+  const handleCreateConfig = async () => {
+    if (!newConfig.name || !newConfig.base_url || !newConfig.api_key) {
+      alert('Completa todos los campos');
+      return;
     }
-  ]);
 
-  const testGophishConnection = async () => {
-    setConnectionStatus('testing');
-    
-    // Simulación de test de conexión
-    setTimeout(() => {
-      if (gophishApiKey && gophishUrl) {
-        setConnectionStatus('success');
-      } else {
-        setConnectionStatus('error');
-      }
-    }, 2000);
+    setIsCreating(true);
+    try {
+      await createConfig(newConfig);
+      setNewConfig({ name: '', base_url: '', api_key: '' });
+      alert('Configuración creada exitosamente');
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const testSmtpProfile = (profileId: number) => {
-    // Simulación de test SMTP
-    setSmtpProfiles(profiles => 
-      profiles.map(profile => 
-        profile.id === profileId 
-          ? { ...profile, status: 'probando' as const }
-          : profile
-      )
-    );
+  const handleTestConfig = async (id: number) => {
+    setTestingIds(prev => new Set(prev).add(id));
+    try {
+      const result = await testConfig(id);
+      setTestResults(prev => ({ ...prev, [id]: result }));
+    } catch (e: any) {
+      setTestResults(prev => ({ ...prev, [id]: { ok: false, status: 0, error: e.message } }));
+    } finally {
+      setTestingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
-    setTimeout(() => {
-      setSmtpProfiles(profiles => 
-        profiles.map(profile => 
-          profile.id === profileId 
-            ? { ...profile, status: 'activo' as const, lastTest: new Date().toISOString() }
-            : profile
-        )
-      );
-    }, 2000);
+  const handleDeleteConfig = async (id: number) => {
+    if (!confirm('¿Eliminar esta configuración?')) return;
+    try {
+      await deleteConfig(id);
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    }
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div>
-        <h1>Configuración</h1>
-        <p className="text-muted-foreground">
-          Configura las integraciones y parámetros del sistema
+        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
+        <p className="text-muted-foreground mt-2">
+          Gestiona las conexiones con GoPhish y configuraciones del sistema
         </p>
       </div>
 
-      <Tabs defaultValue="gophish" className="space-y-6">
+      <Tabs defaultValue="gophish" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="gophish">GoPhish API</TabsTrigger>
-          <TabsTrigger value="smtp">Perfiles SMTP</TabsTrigger>
-          <TabsTrigger value="domain">Dominio de Pruebas</TabsTrigger>
-          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="gophish">
+            <Server className="w-4 h-4 mr-2" />
+            GoPhish
+          </TabsTrigger>
+          <TabsTrigger value="smtp">
+            <Mail className="w-4 h-4 mr-2" />
+            SMTP
+          </TabsTrigger>
+          {isAdmin() && (
+            <TabsTrigger value="security">
+              <Shield className="w-4 h-4 mr-2" />
+              Seguridad
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* GoPhish API Configuration */}
-        <TabsContent value="gophish">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                Configuración de GoPhish API
-              </CardTitle>
-              <CardDescription>
-                Configura la conexión con tu instancia de GoPhish para sincronizar campañas y eventos
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TabsContent value="gophish" className="space-y-4">
+          {configError && (
+            <Alert variant="destructive">
+              <AlertDescription>{configError}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Configuración Activa */}
+          {activeConfig && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Configuración Activa</span>
+                  <Badge variant="secondary">ID: {activeConfig.id}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-2">
-                  <Label htmlFor="gophishUrl">URL de GoPhish</Label>
-                  <Input
-                    id="gophishUrl"
-                    value={gophishUrl}
-                    onChange={(e) => setGophishUrl(e.target.value)}
-                    placeholder="https://gophish.empresa.com"
-                  />
+                  <p><strong>Nombre:</strong> {activeConfig.name}</p>
+                  <p><strong>URL:</strong> {activeConfig.base_url}</p>
+                  <p><strong>Creada:</strong> {new Date(activeConfig.created_at).toLocaleString()}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gophishApiKey">API Key</Label>
-                  <div className="flex gap-2">
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Crear Nueva Configuración */}
+          {canCreate() && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Nueva Configuración GoPhish
+                </CardTitle>
+                <CardDescription>
+                  Agrega una instancia de GoPhish para gestionar campañas
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="config-name">Nombre</Label>
                     <Input
-                      id="gophishApiKey"
-                      type={isApiKeyVisible ? 'text' : 'password'}
-                      value={gophishApiKey}
-                      onChange={(e) => setGophishApiKey(e.target.value)}
-                      placeholder="gp_..."
+                      id="config-name"
+                      placeholder="GoPhish Producción"
+                      value={newConfig.name}
+                      onChange={e => setNewConfig(prev => ({ ...prev, name: e.target.value }))}
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                    >
-                      {isApiKeyVisible ? 'Ocultar' : 'Mostrar'}
-                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="config-url">URL Base</Label>
+                    <Input
+                      id="config-url"
+                      placeholder="https://gophish.ejemplo.com"
+                      value={newConfig.base_url}
+                      onChange={e => setNewConfig(prev => ({ ...prev, base_url: e.target.value }))}
+                    />
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <Button 
-                  onClick={testGophishConnection}
-                  disabled={connectionStatus === 'testing'}
-                  className="gap-2"
-                >
-                  <TestTube className="w-4 h-4" />
-                  {connectionStatus === 'testing' ? 'Probando...' : 'Probar Conexión'}
+                <div className="space-y-2">
+                  <Label htmlFor="config-apikey">API Key</Label>
+                  <Input
+                    id="config-apikey"
+                    type="password"
+                    placeholder="xxxxxxxxxxxxxxxxxxxxxxxx"
+                    value={newConfig.api_key}
+                    onChange={e => setNewConfig(prev => ({ ...prev, api_key: e.target.value }))}
+                  />
+                </div>
+                <Button onClick={handleCreateConfig} disabled={isCreating}>
+                  {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Crear Configuración
                 </Button>
+              </CardContent>
+            </Card>
+          )}
 
-                {connectionStatus === 'success' && (
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Conectado
-                  </Badge>
-                )}
-                
-                {connectionStatus === 'error' && (
-                  <Badge variant="destructive" className="gap-1">
-                    <XCircle className="w-3 h-3" />
-                    Error de Conexión
-                  </Badge>
-                )}
-              </div>
+          {/* Lista de Configuraciones */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuraciones Existentes</CardTitle>
+              <CardDescription>Tus instancias de GoPhish configuradas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {configLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : configs.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No hay configuraciones</p>
+              ) : (
+                <div className="space-y-4">
+                  {configs.map(config => {
+                    const testResult = testResults[config.id];
+                    const isTesting = testingIds.has(config.id);
+                    const isActive = activeConfig?.id === config.id;
 
-              {connectionStatus === 'success' && (
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Conexión exitosa con GoPhish. Las campañas y eventos se sincronizarán automáticamente.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {connectionStatus === 'error' && (
-                <Alert variant="destructive">
-                  <XCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No se pudo conectar con GoPhish. Verifica la URL y API Key.
-                  </AlertDescription>
-                </Alert>
+                    return (
+                      <div key={config.id} className={`p-4 border rounded-lg ${isActive ? 'border-primary bg-primary/5' : ''}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{config.name}</h4>
+                              {isActive && <Badge variant="default">Activa</Badge>}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{config.base_url}</p>
+                            <p className="text-xs text-muted-foreground">ID: {config.id} | Propietario: {config.owner_userid}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isActive && (
+                              <Button size="sm" variant="outline" onClick={() => setActiveConfigId(config.id)}>
+                                Activar
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleTestConfig(config.id)} disabled={isTesting}>
+                              {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Probar'}
+                            </Button>
+                            {canDelete() && (
+                              <Button size="sm" variant="destructive" onClick={() => handleDeleteConfig(config.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {testResult && (
+                          <div className={`mt-2 p-2 rounded text-sm ${testResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {testResult.ok ? (
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Conexión exitosa (HTTP {testResult.status})</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <XCircle className="w-4 h-4" />
+                                <span>{testResult.error || 'Error de conexión'}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* SMTP Profiles */}
         <TabsContent value="smtp">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    Perfiles de Envío SMTP
-                  </CardTitle>
-                  <CardDescription>
-                    Configura los servidores SMTP para envío de emails de las campañas
-                  </CardDescription>
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Nuevo Perfil
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Nuevo Perfil SMTP</DialogTitle>
-                      <DialogDescription>
-                        Configura un nuevo servidor SMTP para envío de emails
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtpName">Nombre del Perfil</Label>
-                        <Input id="smtpName" placeholder="SMTP Corporativo" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="smtpHost">Servidor SMTP</Label>
-                          <Input id="smtpHost" placeholder="smtp.empresa.com" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="smtpPort">Puerto</Label>
-                          <Input id="smtpPort" placeholder="587" type="number" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="smtpUser">Usuario</Label>
-                          <Input id="smtpUser" placeholder="noreply@empresa.com" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="smtpPass">Contraseña</Label>
-                          <Input id="smtpPass" type="password" />
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch id="smtpTLS" />
-                        <Label htmlFor="smtpTLS">Usar TLS/STARTTLS</Label>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline">Cancelar</Button>
-                        <Button>Guardar y Probar</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <CardTitle>Configuración SMTP</CardTitle>
+              <CardDescription>Placeholder para configurar servidores de correo</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Servidor</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Último Test</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {smtpProfiles.map((profile) => (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium">{profile.name}</TableCell>
-                      <TableCell>{profile.host}:{profile.port}</TableCell>
-                      <TableCell>{profile.username}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          profile.status === 'activo' ? 'default' :
-                          profile.status === 'probando' ? 'secondary' :
-                          'outline'
-                        }>
-                          {profile.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(profile.lastTest).toLocaleDateString('es-CL')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => testSmtpProfile(profile.id)}
-                            disabled={profile.status === 'probando'}
-                          >
-                            <TestTube className="w-3 h-3" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <p className="text-muted-foreground">Implementación pendiente</p>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Domain Configuration */}
-        <TabsContent value="domain">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                Dominio de Pruebas
-              </CardTitle>
-              <CardDescription>
-                Configura el dominio para las landing pages de las campañas
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="testDomain">Dominio de Landing Pages</Label>
-                <Input
-                  id="testDomain"
-                  value={testDomain}
-                  onChange={(e) => setTestDomain(e.target.value)}
-                  placeholder="phishing-test.empresa.com"
-                />
-              </div>
-
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Configuración DNS requerida:</strong>
-                  <div className="mt-2 space-y-1 text-sm">
-                    <div><code>A {testDomain} → 192.168.1.100</code></div>
-                    <div><code>TXT {testDomain} → "v=spf1 include:empresa.com ~all"</code></div>
-                    <div><code>DKIM selector._domainkey.{testDomain} → "v=DKIM1; k=rsa; p=..."</code></div>
-                  </div>
-                </AlertDescription>
-              </Alert>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Estado SPF</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">Configurado</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Estado DKIM</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-red-600" />
-                      <span className="text-sm">Pendiente</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Button className="gap-2">
-                <TestTube className="w-4 h-4" />
-                Verificar Configuración DNS
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications */}
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de Notificaciones</CardTitle>
-              <CardDescription>
-                Configura cómo y cuándo recibir notificaciones del sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                {[
-                  { id: 'campaign-complete', label: 'Campaña completada', description: 'Cuando una campaña termine' },
-                  { id: 'high-click-rate', label: 'Tasa de clics alta', description: 'Cuando la tasa supere el 10%' },
-                  { id: 'user-reported', label: 'Usuario reportó phishing', description: 'Cuando alguien reporte un email' },
-                  { id: 'approval-needed', label: 'Aprobación pendiente', description: 'Cuando haya campañas por aprobar' },
-                  { id: 'system-errors', label: 'Errores del sistema', description: 'Problemas técnicos o de conexión' }
-                ].map((notification) => (
-                  <div key={notification.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">{notification.label}</h4>
-                      <p className="text-sm text-muted-foreground">{notification.description}</p>
-                    </div>
-                    <Switch />
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notificationEmail">Email para Notificaciones</Label>
-                <Input
-                  id="notificationEmail"
-                  placeholder="admin@empresa.com"
-                  defaultValue="admin@empresa.com"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isAdmin() && (
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Seguridad y Permisos</CardTitle>
+                <CardDescription>Gestión de roles y accesos (solo platform_admin)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Implementación pendiente</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
-
-      {/* Dev Annotations */}
-      <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h3 className="font-medium mb-2">🔧 Anotaciones para Desarrolladores</h3>
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p><strong>POST /api/gophish/test</strong> → Probar conexión con GoPhish API</p>
-          <p><strong>POST /api/smtp/test</strong> → Probar configuración SMTP</p>
-          <p><strong>GET /api/dns/verify/{'{domain}'}</strong> → Verificar registros SPF/DKIM</p>
-          <p><strong>PUT /api/settings</strong> → Guardar configuración del sistema</p>
-          <p><strong>POST /api/notifications/test</strong> → Enviar notificación de prueba</p>
-        </div>
-      </div>
     </div>
   );
 }

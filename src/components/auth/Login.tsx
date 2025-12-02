@@ -89,8 +89,8 @@ export function Login({ onLogin, onError }: LoginProps) {
       onLogin({
         uid: u.uid,
         email: u.email,
-        displayName: u.displayName || u.email?.split('@')[0] || 'Usuario',
-        role: 'user',
+        name: u.displayName || u.email?.split('@')[0] || 'Usuario', // Cambio aquí
+        role: 'viewer', // Será sobrescrito por backend
         department: 'Ciberseguridad',
         lastLogin: new Date().toISOString(),
         provider: 'email'

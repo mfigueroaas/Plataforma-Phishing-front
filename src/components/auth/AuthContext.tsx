@@ -1,44 +1,31 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-
-/**
- * Contexto de Autenticación Firebase para UTEM Ciberseguridad
- * 
- * Este contexto proporciona el estado de autenticación global y funciones
- * para manejar login, logout y verificación de permisos.
- * 
- * Para implementar Firebase Auth:
- * 1. Instalar: npm install firebase
- * 2. Configurar Firebase en /firebase/config.js
- * 3. Implementar los métodos comentados con Firebase Auth SDK
- * 
- * Endpoints Firebase utilizados:
- * - signInWithEmailAndPassword()
- * - signOut()
- * - onAuthStateChanged()
- * - sendPasswordResetEmail()
- * - updateProfile()
- */
+import { apiFetch, setAuthToken, apiUsers } from '../../lib/api/client';
 
 interface User {
-  uid: string;
+  id: number; // ID en base de datos backend
+  uid: string; // Firebase UID
   email: string;
-  displayName: string;
-  role: string;
-  department: string;
+  name: string; // Cambiado de displayName
+  role: 'viewer' | 'operator' | 'platform_admin';
+  department?: string; // Opcional, de Firestore
   lastLogin: string;
-  permissions?: string[];
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
-  hasPermission: (permission: string) => boolean;
+  isViewer: () => boolean;
+  isOperator: () => boolean;
   isAdmin: () => boolean;
+  canCreate: () => boolean; // operator o admin
+  canEdit: () => boolean; // operator o admin
+  canDelete: () => boolean; // operator o admin
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,87 +45,158 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
 
+  // Listener real de Firebase Auth + sincronización con backend y Firestore
   useEffect(() => {
-    // TODO: Implementar listener de Firebase Auth
-    // import { onAuthStateChanged } from 'firebase/auth';
-    // import { auth } from '../../firebase/config';
-    // import { doc, getDoc } from 'firebase/firestore';
-    // import { db } from '../../firebase/config';
-    // 
-    // const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-    //   if (firebaseUser) {
-    //     // Obtener datos adicionales del usuario desde Firestore
-    //     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-    //     const userData = userDoc.data();
-    //     
-    //     setUser({
-    //       uid: firebaseUser.uid,
-    //       email: firebaseUser.email || '',
-    //       displayName: firebaseUser.displayName || userData?.displayName || 'Usuario UTEM',
-    //       role: userData?.role || 'user',
-    //       department: userData?.department || 'Sin asignar',
-    //       lastLogin: new Date().toISOString(),
-    //       permissions: userData?.permissions || []
-    //     });
-    //   } else {
-    //     setUser(null);
-    //   }
-    //   setLoading(false);
-    // });
-    // 
-    // return unsubscribe;
+    let unsubscribeAuth: (() => void) | undefined;
+    let unsubscribeToken: (() => void) | undefined;
 
-    // Simulación para desarrollo
-    const checkAuthState = () => {
-      const savedUser = localStorage.getItem('utem-user');
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser));
-        } catch (error) {
-          console.error('Error parsing saved user:', error);
-          localStorage.removeItem('utem-user');
-        }
+    (async () => {
+      try {
+        const [authExports, firebaseConfig, firestoreExports] = await Promise.all([
+          import('firebase/auth'),
+          import('../../firebase/config'),
+          import('firebase/firestore'),
+        ]);
+        const { onAuthStateChanged, onIdTokenChanged } = authExports;
+        const { auth, db } = firebaseConfig as any;
+        const { doc, getDoc, setDoc } = firestoreExports;
+
+        unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: any) => {
+          console.log('[Auth] onAuthStateChanged:', !!firebaseUser);
+          if (firebaseUser) {
+            try {
+              const idToken: string = await firebaseUser.getIdToken();
+              setToken(idToken);
+              setAuthToken(idToken);
+              console.log('[Auth] Token set');
+
+              // Firestore opcional
+              let fsData: any = {};
+              try {
+                const ref = doc(db, 'users', firebaseUser.uid);
+                const snap = await getDoc(ref);
+                fsData = snap.exists() ? snap.data() : {};
+                // No bloquea si falla
+                try {
+                  if (!snap.exists()) {
+                    await setDoc(ref, {
+                      email: firebaseUser.email || '',
+                      department: 'Sin asignar',
+                      createdAt: new Date().toISOString(),
+                      lastLogin: new Date().toISOString(),
+                    }, { merge: true });
+                  } else {
+                    await setDoc(ref, { lastLogin: new Date().toISOString() }, { merge: true });
+                  }
+                } catch (e) {
+                  console.warn('[Auth] No se pudo escribir lastLogin en Firestore:', e);
+                }
+              } catch (firestoreError) {
+                console.warn('[Auth] Firestore no disponible:', firestoreError);
+              }
+
+              // Backend: /users/me
+              try {
+                const backendProfile = await apiUsers.me();
+                console.log('[Auth] /users/me OK:', backendProfile);
+                setUser({
+                  id: backendProfile.id,
+                  uid: backendProfile.firebase_uid,
+                  email: backendProfile.email,
+                  name: backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
+                  role: backendProfile.role,
+                  department: fsData?.department || 'Sin asignar',
+                  lastLogin: new Date().toISOString(),
+                });
+              } catch (apiError: any) {
+                console.error('[Auth] /users/me error:', apiError?.message || apiError);
+                // Fallback mínimo con Firebase
+                setUser({
+                  id: 0,
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email || '',
+                  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
+                  role: 'viewer',
+                  department: fsData?.department || 'Sin asignar',
+                  lastLogin: new Date().toISOString(),
+                });
+              }
+            } catch (tokenError) {
+              console.error('[Auth] getIdToken error:', tokenError);
+              setUser(null);
+              setToken(null);
+              setAuthToken(null);
+            }
+          } else {
+            setUser(null);
+            setToken(null);
+            setAuthToken(null);
+          }
+          setLoading(false);
+        });
+
+        // Importante: al refrescar token, también intentamos actualizar el perfil si ya hay usuario
+        unsubscribeToken = onIdTokenChanged(auth, async (firebaseUser: any) => {
+          console.log('[Auth] onIdTokenChanged:', !!firebaseUser);
+          if (firebaseUser) {
+            try {
+              const freshToken = await firebaseUser.getIdToken();
+              setToken(freshToken);
+              setAuthToken(freshToken);
+              console.log('[Auth] Token refreshed');
+
+              // Si ya hay user, refrescamos su perfil del backend (roles pueden cambiar)
+              try {
+                const backendProfile = await apiUsers.me();
+                console.log('[Auth] /users/me on token refresh OK');
+                setUser(prev => {
+                  const base = prev || {
+                    id: backendProfile.id,
+                    uid: backendProfile.firebase_uid,
+                    email: backendProfile.email,
+                    name: backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
+                    department: 'Sin asignar',
+                    lastLogin: new Date().toISOString(),
+                  };
+                  return {
+                    ...base,
+                    id: backendProfile.id,
+                    uid: backendProfile.firebase_uid,
+                    email: backendProfile.email,
+                    name: backendProfile.name || base.name,
+                    role: backendProfile.role,
+                  };
+                });
+              } catch (apiError) {
+                console.warn('[Auth] /users/me failed on token refresh:', apiError);
+              }
+            } catch (e) {
+              console.warn('[Auth] Error refrescando token:', e);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[Auth] Firebase init error:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    };
+    })();
 
-    checkAuthState();
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeToken) unsubscribeToken();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     setLoading(true);
     try {
-      // TODO: Implementar login con Firebase
-      // import { signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-      // import { auth } from '../../firebase/config';
-      // import { doc, setDoc, getDoc } from 'firebase/firestore';
-      // import { db } from '../../firebase/config';
-      // 
-      // const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // const firebaseUser = userCredential.user;
-      // 
-      // // Actualizar último login en Firestore
-      // await setDoc(doc(db, 'users', firebaseUser.uid), {
-      //   lastLogin: new Date().toISOString(),
-      //   email: firebaseUser.email
-      // }, { merge: true });
-
-      // Simulación para desarrollo
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userData: User = {
-        uid: 'demo-user-123',
-        email,
-        displayName: 'Usuario Demo UTEM',
-        role: 'admin',
-        department: 'Ciberseguridad',
-        lastLogin: new Date().toISOString(),
-        permissions: ['read', 'write', 'admin', 'delete']
-      };
-
-      setUser(userData);
-      localStorage.setItem('utem-user', JSON.stringify(userData));
+      const [{ signInWithEmailAndPassword }, { auth }] = await Promise.all([
+        import('firebase/auth'),
+        import('../../firebase/config')
+      ]);
+      await signInWithEmailAndPassword(auth, email, password);
     } finally {
       setLoading(false);
     }
@@ -147,141 +205,96 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loginWithGoogle = async (): Promise<void> => {
     setLoading(true);
     try {
-      // TODO: Implementar Google Sign-In con Firebase
-      // import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-      // import { auth } from '../../firebase/config';
-      // import { doc, setDoc, getDoc } from 'firebase/firestore';
-      // import { db } from '../../firebase/config';
-      // 
-      // const provider = new GoogleAuthProvider();
-      // provider.addScope('email');
-      // provider.addScope('profile');
-      // 
-      // // Configurar parámetros adicionales para Google
-      // provider.setCustomParameters({
-      //   'hd': 'utem.cl', // Restricción a dominio UTEM (opcional)
-      //   'prompt': 'select_account'
-      // });
-      // 
-      // const result = await signInWithPopup(auth, provider);
-      // const firebaseUser = result.user;
-      // 
-      // // Verificar dominio del email (opcional para mayor seguridad)
-      // if (firebaseUser.email && !firebaseUser.email.endsWith('@utem.cl')) {
-      //   throw new Error('UTEM_DOMAIN_REQUIRED');
-      // }
-      // 
-      // // Actualizar información del usuario en Firestore
-      // await setDoc(doc(db, 'users', firebaseUser.uid), {
-      //   lastLogin: new Date().toISOString(),
-      //   email: firebaseUser.email,
-      //   displayName: firebaseUser.displayName,
-      //   provider: 'google'
-      // }, { merge: true });
-
-      // Simulación para desarrollo
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const userData: User = {
-        uid: 'google-user-456',
-        email: 'usuario.google@utem.cl',
-        displayName: 'Usuario Google UTEM',
-        role: 'user',
-        department: 'Ciberseguridad',
-        lastLogin: new Date().toISOString(),
-        permissions: ['read', 'write']
-      };
-
-      setUser(userData);
-      localStorage.setItem('utem-user', JSON.stringify(userData));
+      const [{ GoogleAuthProvider, signInWithPopup }, { auth }] = await Promise.all([
+        import('firebase/auth'),
+        import('../../firebase/config')
+      ]);
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const gUser = result.user;
+      if (gUser.email && import.meta.env.VITE_GOOGLE_DOMAIN && !gUser.email.endsWith(`@${import.meta.env.VITE_GOOGLE_DOMAIN}`)) {
+        throw new Error('UTEM_DOMAIN_REQUIRED');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      // TODO: Implementar logout con Firebase
-      // import { signOut } from 'firebase/auth';
-      // import { auth } from '../../firebase/config';
-      // 
-      // await signOut(auth);
-
-      // Simulación para desarrollo
-      setUser(null);
-      localStorage.removeItem('utem-user');
-    } catch (error) {
-      console.error('Error durante logout:', error);
-      throw error;
-    }
+    const [{ signOut }, { auth }] = await Promise.all([
+      import('firebase/auth'),
+      import('../../firebase/config')
+    ]);
+    await signOut(auth);
+    setUser(null);
+    setToken(null);
+    setAuthToken(null);
   };
 
   const resetPassword = async (email: string): Promise<void> => {
-    try {
-      // TODO: Implementar reset de contraseña con Firebase
-      // import { sendPasswordResetEmail } from 'firebase/auth';
-      // import { auth } from '../../firebase/config';
-      // 
-      // await sendPasswordResetEmail(auth, email);
-
-      // Simulación para desarrollo
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(`Correo de recuperación enviado a: ${email}`);
-    } catch (error) {
-      console.error('Error al enviar email de recuperación:', error);
-      throw error;
-    }
+    const [{ sendPasswordResetEmail }, { auth }] = await Promise.all([
+      import('firebase/auth'),
+      import('../../firebase/config')
+    ]);
+    await sendPasswordResetEmail(auth, email);
   };
 
   const updateUserProfile = async (data: Partial<User>): Promise<void> => {
     if (!user) throw new Error('No hay usuario autenticado');
-
+    
+    // Actualizar backend si existe endpoint PUT /users/me
     try {
-      // TODO: Implementar actualización de perfil con Firebase
-      // import { updateProfile } from 'firebase/auth';
-      // import { auth } from '../../firebase/config';
-      // import { doc, updateDoc } from 'firebase/firestore';
-      // import { db } from '../../firebase/config';
-      // 
-      // if (data.displayName && auth.currentUser) {
-      //   await updateProfile(auth.currentUser, {
-      //     displayName: data.displayName
-      //   });
-      // }
-      // 
-      // await updateDoc(doc(db, 'users', user.uid), {
-      //   ...data,
-      //   updatedAt: new Date().toISOString()
-      // });
-
-      // Simulación para desarrollo
-      const updatedUser = { ...user, ...data };
-      setUser(updatedUser);
-      localStorage.setItem('utem-user', JSON.stringify(updatedUser));
-    } catch (error) {
-      console.error('Error al actualizar perfil:', error);
-      throw error;
+      await apiFetch('/users/me', {
+        method: 'PUT',
+        body: JSON.stringify({ name: data.name })
+      });
+    } catch (e) {
+      console.warn('Backend no soporta actualización de perfil:', e);
     }
+
+    // Actualizar Firebase Auth displayName
+    if (data.name) {
+      try {
+        const [{ updateProfile }, { auth }] = await Promise.all([
+          import('firebase/auth'),
+          import('../../firebase/config')
+        ]);
+        if (auth.currentUser) {
+          await updateProfile(auth.currentUser, { displayName: data.name });
+        }
+      } catch (e) {
+        console.warn('No se pudo actualizar Firebase Auth:', e);
+      }
+    }
+
+    setUser({ ...user, ...data });
   };
 
-  const hasPermission = (permission: string): boolean => {
-    return user?.permissions?.includes(permission) || false;
-  };
+  const isViewer = (): boolean => user?.role === 'viewer';
+  const isOperator = (): boolean => user?.role === 'operator';
+  const isAdmin = (): boolean => user?.role === 'platform_admin';
+  const canCreate = (): boolean => isOperator() || isAdmin();
+  const canEdit = (): boolean => isOperator() || isAdmin();
+  const canDelete = (): boolean => isOperator() || isAdmin();
 
-  const isAdmin = (): boolean => {
-    return user?.role === 'admin' || hasPermission('admin');
-  };
-
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
+    token,
     login,
     loginWithGoogle,
     logout,
     resetPassword,
     updateUserProfile,
-    hasPermission,
-    isAdmin
+    isViewer,
+    isOperator,
+    isAdmin,
+    canCreate,
+    canEdit,
+    canDelete
   };
 
   return (
