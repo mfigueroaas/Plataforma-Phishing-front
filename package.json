@@ -3,6 +3,8 @@
       "version": "0.1.0",
       "private": true,
       "dependencies": {
+            "@ckeditor/ckeditor5-build-classic": "^40.2.0",
+            "@ckeditor/ckeditor5-react": "^6.3.0",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -48,16 +50,16 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
-                                          "@types/node": "^20.10.0",
-                                          "@types/react": "^18.3.11",
-                                          "@types/react-dom": "^18.3.1",
-                                          "typescript": "^5.6.3",
-                                          "@vitejs/plugin-react-swc": "^3.10.2",
-                                          "vite": "^6.3.6"
+            "@types/node": "^20.10.0",
+            "@types/react": "^18.3.11",
+            "@types/react-dom": "^18.3.1",
+            "@vitejs/plugin-react-swc": "^3.10.2",
+            "typescript": "^5.6.3",
+            "vite": "^6.3.6"
       },
       "scripts": {
-                                          "dev": "vite",
-                                          "build": "vite build",
-                                          "typecheck": "tsc --noEmit"
+            "dev": "vite",
+            "build": "vite build",
+            "typecheck": "tsc --noEmit"
       }
 }

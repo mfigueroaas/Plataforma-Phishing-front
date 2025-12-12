@@ -197,3 +197,101 @@ export const apiSendingProfiles = {
       method: 'DELETE'
     })
 };
+
+// ============ PÁGINAS DE DESTINO (LANDING PAGES) ============
+export interface LandingPage {
+  local_id: number;
+  gophish_id: number;
+  name: string;
+  html: string;
+  redirect_url: string;
+  capture_credentials: boolean;
+  capture_passwords: boolean;
+  created_at: string;
+  updated_at: string;
+  modified_date: string;
+}
+
+export interface LandingPageCreate {
+  name: string;
+  html: string;
+  redirect_url: string;
+  capture_credentials: boolean;
+  capture_passwords: boolean;
+}
+
+export interface LandingPageUpdate {
+  name?: string;
+  html?: string;
+  redirect_url?: string;
+  capture_credentials?: boolean;
+  capture_passwords?: boolean;
+}
+
+export interface LandingPageImportPreview {
+  include_resources: boolean;
+  url: string;
+}
+
+// ⬇️ ACTUALIZAR tipo de retorno
+export interface LandingPageImportResponse {
+  action: string;
+  preview: {
+    html: string;
+  };
+}
+
+export const apiLandingPages = {
+  list: (configId: number): Promise<LandingPage[]> => 
+    apiFetch(`/gophish/${configId}/landing-pages`),
+  
+  get: (configId: number, pageId: number): Promise<LandingPage> => 
+    apiFetch(`/gophish/${configId}/landing-pages/${pageId}`),
+  
+  create: (configId: number, data: LandingPageCreate): Promise<LandingPage> => {
+    const payload = {
+      name: data.name,
+      html: data.html,
+      redirect_url: data.redirect_url,
+      capture_credentials: data.capture_credentials,
+      capture_passwords: data.capture_passwords
+    };
+    console.log('🔵 API Client - Landing Page Create:', payload);
+    return apiFetch(`/gophish/${configId}/landing-pages`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  
+  update: (configId: number, pageId: number, data: LandingPageUpdate): Promise<LandingPage> => {
+    const payload: any = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.html !== undefined) payload.html = data.html;
+    if (data.redirect_url !== undefined) payload.redirect_url = data.redirect_url;
+    if (data.capture_credentials !== undefined) payload.capture_credentials = data.capture_credentials;
+    if (data.capture_passwords !== undefined) payload.capture_passwords = data.capture_passwords;
+    
+    console.log('🔵 API Client - Landing Page Update:', payload);
+    return apiFetch(`/gophish/${configId}/landing-pages/${pageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+  
+  delete: (configId: number, pageId: number): Promise<void> =>
+    apiFetch(`/gophish/${configId}/landing-pages/${pageId}/remote`, {
+      method: 'DELETE'
+    }),
+  
+  importPreview: (configId: number, data: LandingPageImportPreview): Promise<LandingPageImportResponse> => {
+    console.log('🔵 API Client - Landing Page Import Preview:', data);
+    return apiFetch(`/gophish/${configId}/landing-pages/import-site/preview`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+    .then(response => {
+      console.log('🔵 API Client - Import Response:', response);
+      return response;
+    });
+  }
+};

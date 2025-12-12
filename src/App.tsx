@@ -13,6 +13,7 @@ import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
+import { LandingPages } from './components/landing/LandingPages';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -128,23 +129,7 @@ export default function App() {
           </div>
         );
       case 'landing':
-        return (
-          <div className="p-4 sm:p-6">
-            <h1 className="text-xl sm:text-2xl">Páginas de Destino</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Editor de landing pages educativas en desarrollo...
-            </p>
-            <div className="mt-8 p-4 bg-muted rounded-lg">
-              <h3 className="font-medium mb-2">🔧 Funcionalidades Planificadas</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Editor visual de landing pages</li>
-                <li>• Plantillas de páginas educativas</li>
-                <li>• Captura de credenciales (para entrenamiento)</li>
-                <li>• Métricas de interacción</li>
-              </ul>
-            </div>
-          </div>
-        );
+        return <LandingPages />;
       case 'sending':
         return <SendingProfiles />;
       case 'management':
