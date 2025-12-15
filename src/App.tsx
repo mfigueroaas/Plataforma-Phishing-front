@@ -6,14 +6,14 @@ import { CampaignList } from './components/campaigns/CampaignList';
 import { CreateCampaign } from './components/campaigns/CreateCampaign';
 import { TemplateEditor } from './components/templates/TemplateEditor';
 import { Settings } from './components/settings/Settings';
-import { LandingPage } from './components/landing/LandingPage';
+import { LandingPages } from './components/landing/LandingPages';
 import { Login } from './components/auth/Login';
 import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
-import { LandingPages } from './components/landing/LandingPages';
+
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -44,7 +44,7 @@ export default function App() {
   const isLandingPage = urlParams.get('landing') === 'true';
   
   if (isLandingPage) {
-    return <LandingPage campaignId={urlParams.get('c') || 'demo'} userId={urlParams.get('u') || 'demo'} />;
+    return <LandingPages />;
   }
 
   if (authLoading) {

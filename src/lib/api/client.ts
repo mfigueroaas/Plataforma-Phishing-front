@@ -131,6 +131,98 @@ export const apiSMTP = {
     })
 };
 
+// ============ TEMPLATES (GoPhish) ============
+export interface EmailTemplateAttachment {
+  content: string;
+  name: string;
+  type: string;
+}
+
+export interface EmailTemplate {
+  local_id: number;
+  gophish_id: number;
+  name: string;
+  subject: string;
+  envelope_sender?: string;
+  html: string;
+  text: string;
+  attachments?: EmailTemplateAttachment[];
+  created_at: string;
+  modified_date: string;
+}
+
+export interface EmailTemplateCreate {
+  attachments?: EmailTemplateAttachment[];
+  envelope_sender?: string;
+  html: string;
+  name: string;
+  subject: string;
+  text: string;
+}
+
+export interface EmailTemplateUpdate {
+  attachments?: EmailTemplateAttachment[];
+  envelope_sender?: string;
+  html?: string;
+  name?: string;
+  subject?: string;
+  text?: string;
+}
+
+export interface EmailTemplateImportRequest {
+  content: string; // raw RFC 2045 email
+  convert_links: boolean;
+  raw?: string;
+}
+
+export interface EmailTemplateImportResponse {
+  action?: string;
+  preview?: {
+    html?: string;
+    text?: string;
+    subject?: string;
+  };
+  template?: {
+    html?: string;
+    text?: string;
+    subject?: string;
+    envelope_sender?: string;
+    attachments?: EmailTemplateAttachment[];
+  };
+  html?: string;
+  text?: string;
+  subject?: string;
+}
+
+export const apiGophishTemplates = {
+  list: (configId: number): Promise<EmailTemplate[]> =>
+    apiFetch(`/gophish/${configId}/templates`),
+
+  get: (configId: number, id: number): Promise<EmailTemplate> =>
+    apiFetch(`/gophish/${configId}/templates/${id}`),
+
+  create: (configId: number, data: EmailTemplateCreate): Promise<EmailTemplate> =>
+    apiFetch(`/gophish/${configId}/templates`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  update: (configId: number, id: number, data: EmailTemplateUpdate): Promise<EmailTemplate> =>
+    apiFetch(`/gophish/${configId}/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  delete: (configId: number, id: number): Promise<void> =>
+    apiFetch(`/gophish/${configId}/templates/${id}/remote`, { method: 'DELETE' }),
+
+  importPreview: (configId: number, data: EmailTemplateImportRequest): Promise<EmailTemplateImportResponse> =>
+    apiFetch(`/gophish/${configId}/templates/import-email/preview`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+};
+
 // ============ PERFILES DE ENVÍO (SENDING PROFILES) ============
 export interface SendingProfileHeader {
   key: string;
@@ -235,6 +327,7 @@ export interface LandingPageImportPreview {
 
 // ⬇️ ACTUALIZAR tipo de retorno
 export interface LandingPageImportResponse {
+  html: string;
   action: string;
   preview: {
     html: string;

@@ -1,344 +1,570 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { useAuth } from '../auth/AuthContext';
+import { 
+  apiGophishTemplates, 
+  EmailTemplate, 
+  EmailTemplateCreate, 
+  EmailTemplateAttachment,
+  EmailTemplateImportRequest
+} from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
+import { Badge } from '../ui/badge';
+import { Checkbox } from '../ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { 
-  Eye, 
-  Code, 
-  Save, 
-  AlertTriangle, 
-  CheckCircle, 
-  X,
-  Upload,
-  Download,
-  RefreshCw
-} from 'lucide-react';
-import { Switch } from '../ui/switch';
-import { Separator } from '../ui/separator';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronDown } from 'lucide-react';
 
 export function TemplateEditor() {
-  const [template, setTemplate] = useState({
-    name: 'Notificación Bancaria',
-    subject: 'Acción Requerida: Verificación de Cuenta',
-    fromEmail: 'seguridad@banco-ejemplo.com',
-    fromName: 'Centro de Seguridad',
-    htmlContent: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Verificación de Cuenta</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #0F4C81; margin-top: 0;">Centro de Seguridad Bancaria</h2>
-        </div>
-        
-        <p>Estimado/a {{.FirstName}},</p>
-        
-        <p>Hemos detectado actividad inusual en su cuenta terminada en {{.LastFour}}. Por su seguridad, necesitamos que verifique su identidad.</p>
-        
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <strong>⚠️ Acción requerida en las próximas 24 horas</strong>
-        </div>
-        
-        <p>Para mantener su cuenta segura, haga clic en el siguiente enlace:</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{.URL}}" style="background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Verificar Mi Cuenta
-            </a>
-        </div>
-        
-        <p style="font-size: 14px; color: #666;">
-            Si no reconoce esta actividad, contacte inmediatamente a nuestro centro de atención al cliente.
-        </p>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-        
-        <p style="font-size: 12px; color: #999;">
-            Este es un email automatizado. Por favor no responda a este mensaje.
-        </p>
-    </div>
-</body>
-</html>`,
-    textContent: `Estimado/a {{.FirstName}},
+  const { activeConfig } = useGoPhishConfig();
+  const { canCreate, canEdit, canDelete } = useAuth();
 
-Hemos detectado actividad inusual en su cuenta terminada en {{.LastFour}}. Por su seguridad, necesitamos que verifique su identidad.
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-ACCIÓN REQUERIDA EN LAS PRÓXIMAS 24 HORAS
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-Para mantener su cuenta segura, visite el siguiente enlace:
-{{.URL}}
-
-Si no reconoce esta actividad, contacte inmediatamente a nuestro centro de atención al cliente.
-
-Este es un email automatizado. Por favor no responda a este mensaje.`
+  const [formData, setFormData] = useState<EmailTemplateCreate>({
+    name: '',
+    subject: '',
+    envelope_sender: '',
+    html: '',
+    text: '',
+    attachments: []
   });
 
-  const [validationResults, setValidationResults] = useState([
-    { type: 'warning', message: 'Detectado texto que simula urgencia ("24 horas")' },
-    { type: 'success', message: 'No se detectaron logos reales de marcas' },
-    { type: 'success', message: 'No se detectó información personal identificable' },
-    { type: 'info', message: 'Plantilla usa variables de personalización apropiadas' }
-  ]);
+  const [importData, setImportData] = useState<EmailTemplateImportRequest>({
+    content: '',
+    convert_links: true,
+    raw: ''
+  });
 
-  const [activeTab, setActiveTab] = useState('wysiwyg');
+  useEffect(() => {
+    if (activeConfig) {
+      loadTemplates();
+    } else {
+      setLoading(false);
+      setError('No hay configuración activa. Por favor selecciona una en Configuración.');
+    }
+  }, [activeConfig]);
 
-  const validateTemplate = () => {
-    // Simulación de validación - en producción sería una llamada a API
-    setValidationResults([
-      { type: 'success', message: 'Validación completa: Plantilla segura para uso educativo' },
-      { type: 'success', message: 'No se detectaron logos reales de marcas' },
-      { type: 'success', message: 'No se detectó información personal identificable' },
-      { type: 'info', message: 'Nivel de dificultad: Medio - Apropiado para entrenamiento' }
-    ]);
+  const loadTemplates = async () => {
+    if (!activeConfig) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiGophishTemplates.list(activeConfig.id);
+      setTemplates(data);
+    } catch (e: any) {
+      setError(e.message || 'Error al cargar plantillas de email');
+      console.error('Error cargando templates:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1>Editor de Plantillas</h1>
-          <p className="text-muted-foreground">
-            Crea y edita plantillas de email para campañas de phishing educativo
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
-          <Button variant="outline" className="gap-2">
-            <Upload className="w-4 h-4" />
-            Importar
-          </Button>
-          <Button className="gap-2">
-            <Save className="w-4 h-4" />
-            Guardar Plantilla
-          </Button>
-        </div>
+  const handleCreate = async () => {
+    if (!activeConfig) return;
+    if (!formData.name || !formData.subject) {
+      alert('Por favor completa al menos Nombre y Asunto');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await apiGophishTemplates.create(activeConfig.id, formData);
+      await loadTemplates();
+      resetForm();
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!activeConfig || !editingTemplate) return;
+    setIsSaving(true);
+    try {
+      await apiGophishTemplates.update(activeConfig.id, editingTemplate.local_id, formData);
+      await loadTemplates();
+      setEditingTemplate(null);
+      resetForm();
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!activeConfig) return;
+    if (!confirm('¿Eliminar esta plantilla?')) return;
+    try {
+      await apiGophishTemplates.delete(activeConfig.id, id);
+      await loadTemplates();
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    }
+  };
+
+  const openEditForm = (tpl: EmailTemplate) => {
+    setEditingTemplate(tpl);
+    setFormData({
+      name: tpl.name,
+      subject: tpl.subject,
+      envelope_sender: tpl.envelope_sender || '',
+      html: tpl.html || '',
+      text: tpl.text || '',
+      attachments: tpl.attachments || []
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setEditingTemplate(null);
+    setFormData({ name: '', subject: '', envelope_sender: '', html: '', text: '', attachments: [] });
+    setImportData({ content: '', convert_links: true, raw: '' });
+  };
+
+  const openPreviewInNewWindow = (html: string) => {
+    if (!html) {
+      alert('No hay contenido HTML para previsualizar');
+      return;
+    }
+    const previewWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    if (previewWindow) {
+      previewWindow.document.open();
+      previewWindow.document.write(html);
+      previewWindow.document.close();
+    } else {
+      alert('No se pudo abrir la ventana de preview.');
+    }
+  };
+
+  const handleImportPreview = async () => {
+    if (!activeConfig) return;
+    if (!importData.content) {
+      alert('Pega el email RAW (RFC 2045)');
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const resp = await apiGophishTemplates.importPreview(activeConfig.id, importData);
+      const html = resp?.preview?.html || resp?.html || '';
+      const text = resp?.preview?.text || resp?.text || '';
+      const subject = resp?.preview?.subject || resp?.subject || formData.subject;
+      setFormData(prev => ({ ...prev, html, text, subject }));
+      setIsImportDialogOpen(false);
+      setImportData({ content: '', convert_links: true, raw: '' });
+      alert('✅ Contenido importado. Revisa la vista previa.');
+    } catch (e: any) {
+      console.error('Error import preview:', e);
+      alert(`Error al importar: ${e.message}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const ALLOWED_FILE_TYPES = [
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+    'application/zip',
+    'application/x-rar-compressed'
+  ];
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const handleAttachmentFileChange = (idx: number, file: File) => {
+    // ⬇️ VALIDACIÓN 1: Tipo de archivo
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      alert(`❌ Tipo de archivo no permitido: ${file.type}\n\nFormatos permitidos:\n- PDF\n- Imágenes (PNG, JPG, GIF, WebP)\n- Documentos (Word, Excel)\n- Texto\n- ZIP, RAR`);
+      return;
+    }
+
+    // ⬇️ VALIDACIÓN 2: Tamaño máximo
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`❌ Archivo demasiado grande. Máximo 10MB. Tu archivo: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const base64Content = content.split(',')[1] || content;
+      
+      const list = [...(formData.attachments || [])] as EmailTemplateAttachment[];
+      list[idx] = {
+        ...list[idx],
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        content: base64Content
+      };
+      setFormData(prev => ({ ...prev, attachments: list }));
+    };
+    reader.onerror = () => {
+      alert('❌ Error al leer el archivo');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (!activeConfig) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No hay configuración GoPhish activa. Por favor configura una en la sección de Configuración.
+          </AlertDescription>
+        </Alert>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Editor Panel */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Template Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de Plantilla</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="templateName">Nombre de Plantilla</Label>
-                  <Input
-                    id="templateName"
-                    value={template.name}
-                    onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Asunto del Email</Label>
-                  <Input
-                    id="subject"
-                    value={template.subject}
-                    onChange={(e) => setTemplate({ ...template, subject: e.target.value })}
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fromName">Nombre del Remitente</Label>
-                  <Input
-                    id="fromName"
-                    value={template.fromName}
-                    onChange={(e) => setTemplate({ ...template, fromName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fromEmail">Email del Remitente</Label>
-                  <Input
-                    id="fromEmail"
-                    value={template.fromEmail}
-                    onChange={(e) => setTemplate({ ...template, fromEmail: e.target.value })}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+  return (
+    <div className="p-6 space-y-8">
+      {/* FORMULARIO EDITOR - INLINE */}
+      <Card className="border-2 border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>{editingTemplate ? `Editar: ${editingTemplate.name}` : 'Nueva Plantilla de Email'}</span>
+            {editingTemplate && (
+              <Button variant="ghost" size="sm" onClick={resetForm}>Cancelar edición</Button>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {editingTemplate ? 'Modifica la plantilla existente' : 'Crea una nueva plantilla desde cero o importando un email RAW'}
+          </CardDescription>
+        </CardHeader>
 
-          {/* Content Editor */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Contenido del Email</CardTitle>
-                <Button variant="outline" size="sm" onClick={validateTemplate} className="gap-2">
-                  <RefreshCw className="w-4 h-4" />
-                  Validar
+        <CardContent className="space-y-6">
+          {/* NOMBRE / ASUNTO */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tpl-name" className="text-base font-semibold">Nombre *</Label>
+              <Input id="tpl-name" value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Mi plantilla" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tpl-subject" className="text-base font-semibold">Asunto *</Label>
+              <Input id="tpl-subject" value={formData.subject} onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value }))} placeholder="Asunto del email" />
+            </div>
+          </div>
+
+          {/* ENVELOPE SENDER + IMPORT */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+            <div className="flex-1 space-y-2 w-full">
+              <Label htmlFor="envelope" className="font-semibold">Envelope Sender</Label>
+              <Input id="envelope" placeholder="bounce@domain.example" value={formData.envelope_sender || ''} onChange={e => setFormData(prev => ({ ...prev, envelope_sender: e.target.value }))} />
+            </div>
+            {!editingTemplate && (
+              <Button variant="secondary" onClick={() => setIsImportDialogOpen(true)} className="w-full sm:w-auto">
+                <Download className="w-4 h-4 mr-2" />
+                Importar Email (RAW)
+              </Button>
+            )}
+          </div>
+
+          {/* EDITOR HTML/TEXT */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Contenido</Label>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(formData.html || '')} disabled={!formData.html}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Pantalla Completa
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(formData.html || ''); alert('✅ HTML copiado'); }} disabled={!formData.html}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar HTML
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="wysiwyg">WYSIWYG</TabsTrigger>
-                  <TabsTrigger value="html">HTML</TabsTrigger>
-                  <TabsTrigger value="text">Texto Plano</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="wysiwyg" className="mt-4">
-                  <div className="border rounded-lg p-4 min-h-[400px] bg-background">
-                    <div className="prose max-w-none">
-                      <div className="bg-muted p-4 rounded-md mb-4">
-                        <h3 className="text-primary m-0">Centro de Seguridad Bancaria</h3>
-                      </div>
-                      <p>Estimado/a <span className="bg-yellow-100 px-1 rounded">{'{{.FirstName}}'}</span>,</p>
-                      <p>Hemos detectado actividad inusual en su cuenta terminada en <span className="bg-yellow-100 px-1 rounded">{'{{.LastFour}}'}</span>. Por su seguridad, necesitamos que verifique su identidad.</p>
-                      <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-md my-4">
-                        <strong>⚠️ Acción requerida en las próximas 24 horas</strong>
-                      </div>
-                      <p>Para mantener su cuenta segura, haga clic en el siguiente enlace:</p>
-                      <div className="text-center my-6">
-                        <Button variant="destructive">Verificar Mi Cuenta</Button>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Si no reconoce esta actividad, contacte inmediatamente a nuestro centro de atención al cliente.
-                      </p>
+            </div>
+
+            <Tabs defaultValue="html">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="html">HTML</TabsTrigger>
+                <TabsTrigger value="text">Texto Plano</TabsTrigger>
+              </TabsList>
+              <TabsContent value="html" className="mt-3">
+                <textarea
+                  value={formData.html}
+                  onChange={e => setFormData(prev => ({ ...prev, html: e.target.value }))}
+                  placeholder="<!DOCTYPE html>\n<html>..."
+                  className="w-full h-[350px] p-3 border border-input rounded-lg bg-background text-sm font-mono resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </TabsContent>
+              <TabsContent value="text" className="mt-3">
+                <textarea
+                  value={formData.text}
+                  onChange={e => setFormData(prev => ({ ...prev, text: e.target.value }))}
+                  placeholder="Contenido de texto plano..."
+                  className="w-full h-[250px] p-3 border border-input rounded-lg bg-background text-sm font-mono resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* ADJUNTOS - COLLAPSIBLE */}
+          <Collapsible className="border rounded-lg p-4">
+            <CollapsibleTrigger className="flex items-center gap-2 font-semibold hover:text-primary">
+              <ChevronDown className="w-4 h-4" />
+              Adjuntos ({(formData.attachments || []).length})
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-3 pt-4 border-t">
+              {(formData.attachments || []).map((att, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end p-3 border rounded-lg bg-muted/30">
+                  {/* Nombre */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Nombre</Label>
+                    <Input 
+                      placeholder="documento.pdf" 
+                      value={att.name} 
+                      onChange={e => {
+                        const list = [...(formData.attachments || [])] as EmailTemplateAttachment[];
+                        list[idx] = { ...list[idx], name: e.target.value };
+                        setFormData(prev => ({ ...prev, attachments: list }));
+                      }}
+                      readOnly={true}
+                    />
+                  </div>
+
+                  {/* Tipo MIME */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Tipo MIME</Label>
+                    <Input 
+                      placeholder="application/pdf" 
+                      value={att.type} 
+                      onChange={e => {
+                        const list = [...(formData.attachments || [])] as EmailTemplateAttachment[];
+                        list[idx] = { ...list[idx], type: e.target.value };
+                        setFormData(prev => ({ ...prev, attachments: list }));
+                      }}
+                    />
+                  </div>
+
+                  {/* Archivo */}
+                  <div className="space-y-1">
+                    <Label htmlFor={`file-${idx}`} className="text-xs font-semibold">Seleccionar Archivo</Label>
+                    <input 
+                      id={`file-${idx}`}
+                      type="file" 
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleAttachmentFileChange(idx, file);
+                        }
+                      }}
+                      className="block w-full text-xs border border-input rounded-md px-2 py-2 cursor-pointer"
+                      accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar"
+                    />
+                  </div>
+
+                  {/* Eliminar */}
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => {
+                      const list = (formData.attachments || []).filter((_, i) => i !== idx);
+                      setFormData(prev => ({ ...prev, attachments: list }));
+                    }}
+                    className="h-10"
+                  >
+                    ✕ Eliminar
+                  </Button>
+                </div>
+              ))}
+              
+              {(formData.attachments || []).length === 0 && (
+                <p className="text-sm text-muted-foreground italic">No hay adjuntos aún. Haz clic en "Agregar adjunto" para añadir uno.</p>
+              )}
+
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setFormData(prev => ({ ...prev, attachments: [ ...(prev.attachments || []), { name: '', type: 'application/octet-stream', content: '' } ] }))}
+              >
+                + Agregar adjunto
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* VARIABLES DISPONIBLES - COLLAPSIBLE */}
+          <Collapsible className="border rounded-lg p-4">
+            <CollapsibleTrigger className="flex items-center gap-2 font-semibold hover:text-primary">
+              <ChevronDown className="w-4 h-4" />
+              Variables Disponibles
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 pt-4 border-t">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {[
+                  { v: '{{.FirstName}}', d: 'Nombre del objetivo' },
+                  { v: '{{.LastName}}', d: 'Apellido del objetivo' },
+                  { v: '{{.Email}}', d: 'Email del objetivo' },
+                  { v: '{{.Position}}', d: 'Cargo del objetivo' },
+                  { v: '{{.URL}}', d: 'URL de la landing page' },
+                  { v: '{{.TrackingURL}}', d: 'URL con tracking' },
+                  { v: '{{.LastFour}}', d: 'Últimos 4 dígitos (simulado)' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-md border cursor-pointer hover:bg-muted transition-colors" onClick={() => setFormData(prev => ({ ...prev, html: (prev.html || '') + item.v }))}>
+                    <div className="flex-1 min-w-0">
+                      <code className="text-xs bg-muted px-1 rounded block truncate">{item.v}</code>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{item.d}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="ml-1 flex-shrink-0" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.v); }}>
+                      📋
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ACCIONES */}
+          <div className="flex gap-3 pt-4 border-t">
+            <Button onClick={editingTemplate ? handleUpdate : handleCreate} disabled={isSaving} size="lg">
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (editingTemplate ? <Edit className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />)}
+              {editingTemplate ? 'Guardar cambios' : 'Crear plantilla'}
+            </Button>
+            {editingTemplate && (
+              <Button variant="outline" onClick={resetForm} size="lg">Cancelar</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* LISTA DE PLANTILLAS */}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Plantillas Creadas</h2>
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : templates.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No hay plantillas aún. Crea la primera arriba.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {templates.map(tpl => (
+              <Card key={tpl.local_id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{tpl.name}</CardTitle>
+                      <CardDescription className="mt-2 space-y-1">
+                        <p className="text-sm">ID Local: {tpl.local_id} | GoPhish ID: {tpl.gophish_id}</p>
+                        <p className="text-sm">Asunto: {tpl.subject}</p>
+                        {tpl.envelope_sender && <p className="text-sm">Envelope Sender: {tpl.envelope_sender}</p>}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {tpl.attachments && tpl.attachments.length > 0 && (
+                        <Badge variant="secondary">Adjuntos: {tpl.attachments.length}</Badge>
+                      )}
                     </div>
                   </div>
-                </TabsContent>
-                
-                <TabsContent value="html" className="mt-4">
-                  <Textarea
-                    value={template.htmlContent}
-                    onChange={(e) => setTemplate({ ...template, htmlContent: e.target.value })}
-                    className="min-h-[400px] font-mono text-sm"
-                    placeholder="Contenido HTML de la plantilla..."
-                  />
-                </TabsContent>
-                
-                <TabsContent value="text" className="mt-4">
-                  <Textarea
-                    value={template.textContent}
-                    onChange={(e) => setTemplate({ ...template, textContent: e.target.value })}
-                    className="min-h-[400px]"
-                    placeholder="Versión de texto plano de la plantilla..."
-                  />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Validation Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Validación</CardTitle>
-              <CardDescription>
-                Verificaciones de seguridad y cumplimiento
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {validationResults.map((result, index) => (
-                <Alert key={index} className={
-                  result.type === 'success' ? 'border-green-200 bg-green-50' :
-                  result.type === 'warning' ? 'border-yellow-200 bg-yellow-50' :
-                  result.type === 'error' ? 'border-red-200 bg-red-50' :
-                  'border-blue-200 bg-blue-50'
-                }>
-                  {result.type === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
-                  {result.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-600" />}
-                  {result.type === 'error' && <X className="h-4 w-4 text-red-600" />}
-                  {result.type === 'info' && <AlertTriangle className="h-4 w-4 text-blue-600" />}
-                  <AlertDescription className="text-sm">
-                    {result.message}
-                  </AlertDescription>
-                </Alert>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Variables */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Variables Disponibles</CardTitle>
-              <CardDescription>
-                Haz clic para insertar en el contenido
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {[
-                { var: '{{.FirstName}}', desc: 'Nombre del objetivo' },
-                { var: '{{.LastName}}', desc: 'Apellido del objetivo' },
-                { var: '{{.Email}}', desc: 'Email del objetivo' },
-                { var: '{{.Position}}', desc: 'Cargo del objetivo' },
-                { var: '{{.URL}}', desc: 'URL de la landing page' },
-                { var: '{{.TrackingURL}}', desc: 'URL con tracking' },
-                { var: '{{.LastFour}}', desc: 'Últimos 4 dígitos (simulado)' }
-              ].map((variable, index) => (
-                <div key={index} className="flex items-center justify-between p-2 rounded-md border cursor-pointer hover:bg-muted">
-                  <div>
-                    <code className="text-sm bg-muted px-1 rounded">{variable.var}</code>
-                    <p className="text-xs text-muted-foreground mt-1">{variable.desc}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Modificado: {new Date(tpl.modified_date || tpl.created_at).toLocaleString()}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(tpl.html)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Vista Previa
+                      </Button>
+                      {canEdit() && (
+                        <Button variant="outline" size="sm" onClick={() => openEditForm(tpl)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Editar
+                        </Button>
+                      )}
+                      {canDelete() && (
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(tpl.local_id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Preview */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-base">Vista Previa</CardTitle>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Eye className="w-4 h-4" />
-                  Pantalla Completa
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="text-sm">
-                  <strong>Para:</strong> juan.perez@empresa.com
-                </div>
-                <div className="text-sm">
-                  <strong>De:</strong> {template.fromName} &lt;{template.fromEmail}&gt;
-                </div>
-                <div className="text-sm">
-                  <strong>Asunto:</strong> {template.subject}
-                </div>
-                <Separator />
-                <div className="text-xs text-muted-foreground">
-                  Vista previa con datos de ejemplo
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Dev Annotations */}
-      <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h3 className="font-medium mb-2">🔧 Anotaciones para Desarrolladores</h3>
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p><strong>POST /api/templates/validate</strong> → Validar plantilla (logos, PII, etc.)</p>
-          <p><strong>POST /api/templates</strong> → Guardar plantilla</p>
-          <p><strong>GET /api/templates/{'{id}'}/preview</strong> → Vista previa con datos reales</p>
-          <p><strong>POST /api/templates/import</strong> → Importar desde archivo HTML</p>
-          <p><strong>Validadores:</strong> Detectar logos reales, información personal, enlaces maliciosos</p>
-        </div>
-      </div>
+      {/* IMPORT DIALOG */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-3xl w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>Importar Email RAW</DialogTitle>
+            <DialogDescription>
+              Pega un email completo (RFC 2045). Opcionalmente convierte enlaces a {'{{.URL}}'}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="raw-content">Contenido RAW *</Label>
+              <textarea
+                id="raw-content"
+                value={importData.content}
+                onChange={e => setImportData(prev => ({ ...prev, content: e.target.value }))}
+                placeholder={'From: Test <sender@example.com>\r\nTo: User <user@example.com>\r\nSubject: Import Test\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<html><body>...</body></html>'}
+                className="w-full h-[320px] p-3 border border-input rounded-lg bg-background text-sm font-mono resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="convert-links" checked={importData.convert_links} onCheckedChange={(checked) => setImportData(prev => ({ ...prev, convert_links: !!checked }))} />
+              <Label htmlFor="convert-links" className="cursor-pointer">Convertir enlaces a {'{{.URL}}'}</Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleImportPreview} disabled={isImporting}>
+              {isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              Importar y Previsualizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
