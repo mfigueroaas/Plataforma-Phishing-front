@@ -13,6 +13,7 @@ import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
+import Groups from './components/groups/Groups';
 
 
 export default function App() {
@@ -65,14 +66,14 @@ export default function App() {
 
   const renderMainContent = () => {
     if (currentPage === 'campaigns' && isCreatingCampaign) {
-      return <CreateCampaign />;
+      return <CreateCampaign onBack={() => setIsCreatingCampaign(false)} />;
     }
 
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
       case 'campaigns':
-        return <CampaignList />;
+        return <CampaignList onCreateClick={() => setIsCreatingCampaign(true)} />;
       case 'detection':
         return (
           <div className="p-4 sm:p-6">
@@ -111,23 +112,7 @@ export default function App() {
       case 'account':
         return <Settings />;
       case 'users':
-        return (
-          <div className="p-4 sm:p-6">
-            <h1 className="text-xl sm:text-2xl">Usuarios y Grupos</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Módulo de gestión de usuarios en desarrollo...
-            </p>
-            <div className="mt-8 p-4 bg-muted rounded-lg">
-              <h3 className="font-medium mb-2">🔧 Funcionalidades Planificadas</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Crear y gestionar grupos de usuarios</li>
-                <li>• Importar usuarios desde CSV/LDAP</li>
-                <li>• Asignar roles y permisos</li>
-                <li>• Historial de participación en campañas</li>
-              </ul>
-            </div>
-          </div>
-        );
+        return <Groups />;
       case 'landing':
         return <LandingPages />;
       case 'sending':

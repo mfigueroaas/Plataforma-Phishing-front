@@ -290,6 +290,146 @@ export const apiSendingProfiles = {
     })
 };
 
+// ============ USER GROUPS (GoPhish) ============
+export interface TargetUser {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+}
+
+export interface UserGroup {
+  local_id: number;
+  gophish_id: number;
+  name: string;
+  targets: TargetUser[];
+  created_at: string;
+  modified_date: string;
+}
+
+export interface UserGroupCreate {
+  name: string;
+  targets: TargetUser[];
+}
+
+export interface UserGroupUpdate {
+  name?: string;
+  targets?: TargetUser[];
+}
+
+export interface GroupImportPreviewRequest {
+  // CSV text content: columns email,first_name,last_name,position
+  csv: string;
+}
+
+export interface GroupImportPreviewResponse {
+  preview: {
+    count: number;
+    targets: TargetUser[];
+  };
+}
+
+export const apiUserGroups = {
+  list: (configId: number): Promise<UserGroup[]> =>
+    apiFetch(`/gophish/${configId}/groups`),
+
+  get: (configId: number, id: number): Promise<UserGroup> =>
+    apiFetch(`/gophish/${configId}/groups/${id}`),
+
+  create: (configId: number, data: UserGroupCreate): Promise<UserGroup> =>
+    apiFetch(`/gophish/${configId}/groups`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  update: (configId: number, id: number, data: UserGroupUpdate): Promise<UserGroup> =>
+    apiFetch(`/gophish/${configId}/groups/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  delete: (configId: number, id: number): Promise<void> =>
+    apiFetch(`/gophish/${configId}/groups/${id}/remote`, { method: 'DELETE' }),
+
+  importPreview: (configId: number, data: GroupImportPreviewRequest): Promise<GroupImportPreviewResponse> =>
+    apiFetch(`/gophish/${configId}/groups/import-group/preview`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+};
+
+// ============ CAMPAIGNS (GoPhish) ============
+export interface CampaignStat {
+  total: number;
+  sent: number;
+  opened: number;
+  clicked: number;
+  submitted_data: number;
+  email_reported: number;
+  error: number;
+}
+
+export interface CampaignResult {
+  id: string;
+  status: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  ip?: string;
+  latitude?: number;
+  longitude?: number;
+  send_date?: string;
+  reported?: boolean;
+  modified_date?: string;
+}
+
+export interface Campaign {
+  local_id: number;
+  gophish_id: number;
+  name: string;
+  created_date: string;
+  launch_date?: string;
+  send_by_date?: string;
+  completed_date?: string;
+  template_name: string;
+  page_name: string;
+  status: string;
+  results?: CampaignResult[];
+  timeline?: any[];
+  smtp_name: string;
+  url: string;
+  stats?: CampaignStat;
+}
+
+export interface CampaignCreate {
+  name: string;
+  template_name: string;
+  page_name: string;
+  smtp_name: string;
+  url: string;
+  launch_date: string;
+  send_by_date?: string;
+  group_names: string[];
+}
+
+export const apiCampaigns = {
+  list: (configId: number): Promise<Campaign[]> =>
+    apiFetch(`/gophish/${configId}/campaigns`),
+
+  get: (configId: number, id: number): Promise<Campaign> =>
+    apiFetch(`/gophish/${configId}/campaigns/${id}`),
+
+  create: (configId: number, data: CampaignCreate): Promise<Campaign> =>
+    apiFetch(`/gophish/${configId}/campaigns/`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  delete: (configId: number, id: number): Promise<void> =>
+    apiFetch(`/gophish/${configId}/campaigns/${id}/remote`, { method: 'DELETE' })
+};
+
 // ============ PÁGINAS DE DESTINO (LANDING PAGES) ============
 export interface LandingPage {
   local_id: number;

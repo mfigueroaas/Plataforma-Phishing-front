@@ -1,11 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { 
+  apiCampaigns, 
+  apiUserGroups, 
+  apiGophishTemplates, 
+  apiLandingPages, 
+  apiSendingProfiles,
+  UserGroup,
+  EmailTemplate,
+  LandingPage,
+  SendingProfile,
+  CampaignCreate
+} from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -14,30 +28,99 @@ import {
   Send,
   CheckCircle,
   Clock,
-  AlertTriangle,
-  Eye
+  AlertTriangle
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
-import { Alert, AlertDescription } from '../ui/alert';
 
-export function CreateCampaign() {
+interface CreateCampaignProps {
+  onBack: () => void;
+}
+
+export function CreateCampaign({ onBack }: CreateCampaignProps) {
+  const { canCreate } = useAuth();
+  const { activeConfig } = useGoPhishConfig();
+
   const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [groups, setGroups] = useState<UserGroup[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
+  const [sendingProfiles, setSendingProfiles] = useState<SendingProfile[]>([]);
+
   const [campaignData, setCampaignData] = useState({
     name: '',
-    description: '',
-    targetGroup: '',
-    template: '',
-    sendingProfile: '',
-    launchTime: 'immediate'
+    url: '',
+    launchDate: '',
+    sendByDate: '',
+    selectedGroups: [] as string[],
+    selectedTemplate: '',
+    selectedLandingPage: '',
+    selectedSendingProfile: ''
   });
+
+  useEffect(() => {
+    if (activeConfig?.id) {
+      loadResources();
+    }
+  }, [activeConfig?.id]);
+
+  const loadResources = async () => {
+    if (!activeConfig?.id) return;
+    setLoading(true);
+    try {
+      const [groupsData, templatesData, landingData, sendingData] = await Promise.all([
+        apiUserGroups.list(activeConfig.id),
+        apiGophishTemplates.list(activeConfig.id),
+        apiLandingPages.list(activeConfig.id),
+        apiSendingProfiles.list(activeConfig.id)
+      ]);
+      setGroups(groupsData);
+      setTemplates(templatesData);
+      setLandingPages(landingData);
+      setSendingProfiles(sendingData);
+    } catch (e: any) {
+      setError(e?.message || 'Error al cargar recursos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCampaign = async () => {
+    if (!activeConfig?.id || !canCreate) return;
+    
+    const payload: CampaignCreate = {
+      name: campaignData.name,
+      url: campaignData.url,
+      launch_date: campaignData.launchDate || new Date().toISOString(),
+      send_by_date: campaignData.sendByDate || undefined,
+      group_names: campaignData.selectedGroups,
+      template_name: campaignData.selectedTemplate,
+      page_name: campaignData.selectedLandingPage,
+      smtp_name: campaignData.selectedSendingProfile
+    };
+
+    setLoading(true);
+    setError(null);
+    try {
+      await apiCampaigns.create(activeConfig.id, payload);
+      alert('Campaña creada exitosamente');
+      onBack(); // Navigate back to campaign list
+    } catch (e: any) {
+      setError(e?.message || 'Error al crear campaña');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const steps = [
     { id: 'basic', label: 'Información Básica', icon: Clock },
     { id: 'targets', label: 'Objetivos', icon: Users },
     { id: 'template', label: 'Plantilla', icon: Mail },
     { id: 'sending', label: 'Perfil de Envío', icon: Send },
-    { id: 'review', label: 'Revisión y Aprobación', icon: CheckCircle }
+    { id: 'review', label: 'Revisión', icon: CheckCircle }
   ];
 
   const nextStep = () => {
@@ -58,7 +141,7 @@ export function CreateCampaign() {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre de la Campaña</Label>
+              <Label htmlFor="name">Nombre de la Campaña *</Label>
               <Input
                 id="name"
                 placeholder="Ej: Entrenamiento Phishing Q1 2024"
@@ -67,14 +150,34 @@ export function CreateCampaign() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe el objetivo y contexto de esta campaña..."
-                value={campaignData.description}
-                onChange={(e) => setCampaignData({ ...campaignData, description: e.target.value })}
-                rows={4}
+              <Label htmlFor="url">URL de la campaña *</Label>
+              <Input
+                id="url"
+                placeholder="https://midominio.com"
+                value={campaignData.url}
+                onChange={(e) => setCampaignData({ ...campaignData, url: e.target.value })}
               />
+              <p className="text-xs text-muted-foreground">URL base donde se alojarán las landing pages</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="launchDate">Fecha de lanzamiento</Label>
+                <Input
+                  id="launchDate"
+                  type="datetime-local"
+                  value={campaignData.launchDate}
+                  onChange={(e) => setCampaignData({ ...campaignData, launchDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sendByDate">Enviar antes de (opcional)</Label>
+                <Input
+                  id="sendByDate"
+                  type="datetime-local"
+                  value={campaignData.sendByDate}
+                  onChange={(e) => setCampaignData({ ...campaignData, sendByDate: e.target.value })}
+                />
+              </div>
             </div>
             <Alert>
               <AlertTriangle className="h-4 w-4" />
@@ -89,48 +192,52 @@ export function CreateCampaign() {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="targetGroup">Grupo de Objetivos</Label>
-              <Select value={campaignData.targetGroup} onValueChange={(value: string) => 
-                setCampaignData({ ...campaignData, targetGroup: value })
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un grupo de usuarios" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all-employees">Todos los Empleados (245 usuarios)</SelectItem>
-                  <SelectItem value="executives">Ejecutivos (12 usuarios)</SelectItem>
-                  <SelectItem value="it-department">Departamento IT (8 usuarios)</SelectItem>
-                  <SelectItem value="hr-department">Recursos Humanos (6 usuarios)</SelectItem>
-                  <SelectItem value="sales-team">Equipo de Ventas (45 usuarios)</SelectItem>
-                  <SelectItem value="custom">Grupo Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Grupos de Objetivos *</Label>
+              {loading && <div className="text-sm text-muted-foreground">Cargando grupos...</div>}
+              {!loading && groups.length === 0 && (
+                <Alert>
+                  <AlertDescription>No hay grupos disponibles. Crea un grupo primero.</AlertDescription>
+                </Alert>
+              )}
+              {!loading && groups.length > 0 && (
+                <div className="space-y-2 border rounded-md p-4">
+                  {groups.map((group) => (
+                    <label key={group.local_id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={campaignData.selectedGroups.includes(group.name)}
+                        onChange={(e) => {
+                          const newGroups = e.target.checked
+                            ? [...campaignData.selectedGroups, group.name]
+                            : campaignData.selectedGroups.filter(g => g !== group.name);
+                          setCampaignData({ ...campaignData, selectedGroups: newGroups });
+                        }}
+                        className="rounded"
+                      />
+                      <span className="font-medium">{group.name}</span>
+                      <span className="text-sm text-muted-foreground">({group.targets?.length || 0} usuarios)</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {campaignData.targetGroup && (
+            {campaignData.selectedGroups.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Resumen del Grupo</CardTitle>
+                  <CardTitle className="text-base">Resumen</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Total usuarios:</span>
-                      <span className="ml-2 font-medium">45</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Departamentos:</span>
-                      <span className="ml-2 font-medium">3</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Último entrenamiento:</span>
-                      <span className="ml-2 font-medium">3 meses atrás</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Nivel de riesgo:</span>
-                      <Badge variant="secondary" className="ml-2">Medio</Badge>
-                    </div>
-                  </div>
+                  <p className="text-sm">
+                    <strong>{campaignData.selectedGroups.length}</strong> grupo(s) seleccionado(s)
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Total de usuarios: <strong>
+                      {groups
+                        .filter(g => campaignData.selectedGroups.includes(g.name))
+                        .reduce((sum, g) => sum + (g.targets?.length || 0), 0)}
+                    </strong>
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -141,52 +248,55 @@ export function CreateCampaign() {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="template">Plantilla de Email</Label>
-              <Select value={campaignData.template} onValueChange={(value: string) => 
-                setCampaignData({ ...campaignData, template: value })
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una plantilla" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank-notification">Notificación Bancaria</SelectItem>
-                  <SelectItem value="security-alert">Alerta de Seguridad IT</SelectItem>
-                  <SelectItem value="hr-benefits">Actualización de Beneficios RRHH</SelectItem>
-                  <SelectItem value="policy-update">Actualización de Política</SelectItem>
-                  <SelectItem value="custom">Plantilla Personalizada</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="template">Plantilla de Email *</Label>
+              {loading && <div className="text-sm text-muted-foreground">Cargando plantillas...</div>}
+              {!loading && (
+                <Select 
+                  value={campaignData.selectedTemplate} 
+                  onValueChange={(value: string) => setCampaignData({ ...campaignData, selectedTemplate: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una plantilla" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.local_id} value={template.name}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            {campaignData.template && (
+            <div className="space-y-2">
+              <Label htmlFor="landingPage">Página de destino *</Label>
+              {loading && <div className="text-sm text-muted-foreground">Cargando páginas...</div>}
+              {!loading && (
+                <Select 
+                  value={campaignData.selectedLandingPage} 
+                  onValueChange={(value: string) => setCampaignData({ ...campaignData, selectedLandingPage: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {landingPages.map((page) => (
+                      <SelectItem key={page.local_id} value={page.name}>
+                        {page.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {campaignData.selectedTemplate && (
               <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-base">Vista Previa</CardTitle>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Eye className="w-4 h-4" />
-                      Vista Completa
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-lg p-4 bg-muted/50">
-                    <div className="space-y-2 text-sm">
-                      <div><strong>De:</strong> seguridad@empresa.com</div>
-                      <div><strong>Asunto:</strong> Acción Requerida: Verificación de Cuenta</div>
-                      <Separator className="my-3" />
-                      <div className="space-y-2">
-                        <p>Estimado/a {'{{FirstName}}'},</p>
-                        <p>Hemos detectado actividad inusual en su cuenta. Por favor, haga clic en el enlace para verificar su identidad.</p>
-                        <Button variant="destructive" size="sm">Verificar Cuenta</Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <Badge variant="outline">✓ Sin logos reales</Badge>
-                    <Badge variant="outline">✓ Sin PII detectado</Badge>
-                    <Badge variant="outline">⚠️ Nivel de dificultad: Medio</Badge>
-                  </div>
+                <CardContent className="pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Plantilla seleccionada: <strong>{campaignData.selectedTemplate}</strong>
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -197,61 +307,40 @@ export function CreateCampaign() {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="sendingProfile">Perfil de Envío</Label>
-              <Select value={campaignData.sendingProfile} onValueChange={(value: string) => 
-                setCampaignData({ ...campaignData, sendingProfile: value })
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un perfil SMTP" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="corporate-smtp">SMTP Corporativo</SelectItem>
-                  <SelectItem value="external-test">Servidor de Pruebas Externo</SelectItem>
-                  <SelectItem value="gmail-test">Gmail Test Account</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="sendingProfile">Perfil de Envío (SMTP) *</Label>
+              {loading && <div className="text-sm text-muted-foreground">Cargando perfiles...</div>}
+              {!loading && (
+                <Select 
+                  value={campaignData.selectedSendingProfile} 
+                  onValueChange={(value: string) => setCampaignData({ ...campaignData, selectedSendingProfile: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un perfil SMTP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sendingProfiles.map((profile) => (
+                      <SelectItem key={profile.local_id} value={profile.name}>
+                        {profile.name} ({profile.from_address})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="launchTime">Programación de Envío</Label>
-              <Select value={campaignData.launchTime} onValueChange={(value: string) => 
-                setCampaignData({ ...campaignData, launchTime: value })
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="¿Cuándo enviar?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="immediate">Enviar Inmediatamente</SelectItem>
-                  <SelectItem value="scheduled">Programar Envío</SelectItem>
-                  <SelectItem value="manual">Activación Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {campaignData.sendingProfile && (
+            {campaignData.selectedSendingProfile && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Configuración SMTP</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Servidor:</span>
-                      <span className="ml-2 font-medium">smtp.empresa.com</span>
+                  {sendingProfiles.find(p => p.name === campaignData.selectedSendingProfile) && (
+                    <div className="space-y-1 text-sm">
+                      <p><strong>Perfil:</strong> {campaignData.selectedSendingProfile}</p>
+                      <p><strong>De:</strong> {sendingProfiles.find(p => p.name === campaignData.selectedSendingProfile)?.from_address}</p>
+                      <p><strong>Host:</strong> {sendingProfiles.find(p => p.name === campaignData.selectedSendingProfile)?.host}</p>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Puerto:</span>
-                      <span className="ml-2 font-medium">587</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Autenticación:</span>
-                      <span className="ml-2 font-medium">STARTTLS</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Estado:</span>
-                      <Badge variant="default" className="ml-2">Verificado</Badge>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -265,36 +354,50 @@ export function CreateCampaign() {
               <CardHeader>
                 <CardTitle>Resumen de la Campaña</CardTitle>
                 <CardDescription>
-                  Revisa la configuración antes de enviar para aprobación
+                  Revisa la configuración antes de crear la campaña
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-muted-foreground text-sm">Nombre:</span>
-                    <p className="font-medium">{campaignData.name || 'Sin nombre'}</p>
+                    <p className="text-muted-foreground">Nombre</p>
+                    <p className="font-medium">{campaignData.name || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-sm">Grupo Objetivo:</span>
-                    <p className="font-medium">{campaignData.targetGroup || 'No seleccionado'}</p>
+                    <p className="text-muted-foreground">URL</p>
+                    <p className="font-medium">{campaignData.url || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-sm">Plantilla:</span>
-                    <p className="font-medium">{campaignData.template || 'No seleccionada'}</p>
+                    <p className="text-muted-foreground">Grupos</p>
+                    <p className="font-medium">{campaignData.selectedGroups.join(', ') || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-sm">Perfil de Envío:</span>
-                    <p className="font-medium">{campaignData.sendingProfile || 'No seleccionado'}</p>
+                    <p className="text-muted-foreground">Plantilla</p>
+                    <p className="font-medium">{campaignData.selectedTemplate || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Página de destino</p>
+                    <p className="font-medium">{campaignData.selectedLandingPage || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Perfil SMTP</p>
+                    <p className="font-medium">{campaignData.selectedSendingProfile || '—'}</p>
                   </div>
                 </div>
                 
                 <Separator />
                 
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 <Alert>
-                  <CheckCircle className="h-4 w-4" />
+                  <CheckCircle className="h-4 h-4" />
                   <AlertDescription>
-                    Esta campaña será enviada para aprobación al equipo de revisores. 
-                    Recibirás una notificación cuando sea aprobada o rechazada.
+                    La campaña está lista para ser creada. Haz clic en "Crear campaña" para continuar.
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -307,11 +410,24 @@ export function CreateCampaign() {
     }
   };
 
+  if (!activeConfig?.id) {
+    return (
+      <div className="p-6">
+        <Alert>
+          <AlertTitle>Configuración requerida</AlertTitle>
+          <AlertDescription>
+            Selecciona una configuración de GoPhish para crear campañas.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button variant="ghost" size="sm" className="gap-2" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
           Volver a Campañas
         </Button>
@@ -370,33 +486,32 @@ export function CreateCampaign() {
         <Button 
           variant="outline" 
           onClick={prevStep}
-          disabled={currentStep === 0}
+          disabled={currentStep === 0 || loading}
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
           Anterior
         </Button>
         
-        <Button 
-          onClick={nextStep}
-          disabled={currentStep === steps.length - 1}
-          className="gap-2"
-        >
-          {currentStep === steps.length - 1 ? 'Enviar para Aprobación' : 'Siguiente'}
-          <ArrowRight className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Dev Annotations */}
-      <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h3 className="font-medium mb-2">🔧 Anotaciones para Desarrolladores</h3>
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p><strong>GET /api/templates</strong> → Lista de plantillas disponibles</p>
-          <p><strong>GET /api/groups</strong> → Grupos de usuarios/objetivos</p>
-          <p><strong>GET /api/sending-profiles</strong> → Perfiles SMTP configurados</p>
-          <p><strong>POST /api/campaigns</strong> → Crear campaña (requiere aprobación)</p>
-          <p><strong>POST /api/campaigns/approval</strong> → Enviar para flujo de aprobación</p>
-        </div>
+        {currentStep === steps.length - 1 ? (
+          <Button 
+            onClick={handleCreateCampaign}
+            disabled={loading || !canCreate || !campaignData.name || !campaignData.url || campaignData.selectedGroups.length === 0 || !campaignData.selectedTemplate || !campaignData.selectedLandingPage || !campaignData.selectedSendingProfile}
+            className="gap-2"
+          >
+            {loading ? 'Creando...' : 'Crear campaña'}
+            <CheckCircle className="w-4 h-4" />
+          </Button>
+        ) : (
+          <Button 
+            onClick={nextStep}
+            disabled={loading}
+            className="gap-2"
+          >
+            Siguiente
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        )}
       </div>
     </div>
   );
