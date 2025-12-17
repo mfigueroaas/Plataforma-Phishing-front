@@ -421,7 +421,7 @@ export const apiCampaigns = {
     apiFetch(`/gophish/${configId}/campaigns/${id}`),
 
   create: (configId: number, data: CampaignCreate): Promise<Campaign> =>
-    apiFetch(`/gophish/${configId}/campaigns/`, {
+    apiFetch(`/gophish/${configId}/campaigns`, {
       method: 'POST',
       body: JSON.stringify(data)
     }),

@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 interface CreateCampaignProps {
   onBack: () => void;
@@ -91,16 +93,23 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
   const handleCreateCampaign = async () => {
     if (!activeConfig?.id || !canCreate) return;
     
-    const payload: CampaignCreate = {
-      name: campaignData.name,
-      url: campaignData.url,
-      launch_date: campaignData.launchDate || new Date().toISOString(),
-      send_by_date: campaignData.sendByDate || undefined,
+    // Construir payload solo con campos requeridos y válidos
+    const payload: any = {
+      name: campaignData.name.trim(),
+      url: campaignData.url.trim(),
+      launch_date: campaignData.launchDate ? new Date(campaignData.launchDate).toISOString() : new Date().toISOString(),
       group_names: campaignData.selectedGroups,
-      template_name: campaignData.selectedTemplate,
-      page_name: campaignData.selectedLandingPage,
-      smtp_name: campaignData.selectedSendingProfile
+      template_name: campaignData.selectedTemplate.trim(),
+      page_name: campaignData.selectedLandingPage.trim(),
+      smtp_name: campaignData.selectedSendingProfile.trim()
     };
+
+    // Agregar send_by_date solo si está presente
+    if (campaignData.sendByDate) {
+      payload.send_by_date = new Date(campaignData.sendByDate).toISOString();
+    }
+
+    console.log('📤 Payload de campaña:', payload);
 
     setLoading(true);
     setError(null);
@@ -238,6 +247,58 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                         .reduce((sum, g) => sum + (g.targets?.length || 0), 0)}
                     </strong>
                   </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {campaignData.selectedGroups.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Usuarios por grupo seleccionado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="multiple" className="w-full">
+                    {groups
+                      .filter(g => campaignData.selectedGroups.includes(g.name))
+                      .map((group) => (
+                        <AccordionItem key={group.local_id} value={`group-${group.local_id}`}>
+                          <AccordionTrigger>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{group.name}</span>
+                              <span className="text-xs text-muted-foreground">({group.targets?.length || 0} usuarios)</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            {group.targets && group.targets.length > 0 ? (
+                              <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Email</TableHead>
+                                      <TableHead>Nombre</TableHead>
+                                      <TableHead>Apellido</TableHead>
+                                      <TableHead>Posición</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {group.targets.map((t, idx) => (
+                                      <TableRow key={idx}>
+                                        <TableCell className="text-sm">{t.email}</TableCell>
+                                        <TableCell className="text-sm">{t.first_name || '—'}</TableCell>
+                                        <TableCell className="text-sm">{t.last_name || '—'}</TableCell>
+                                        <TableCell className="text-sm">{t.position || '—'}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">Este grupo no tiene usuarios.</div>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                  </Accordion>
                 </CardContent>
               </Card>
             )}
@@ -386,6 +447,61 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                 </div>
                 
                 <Separator />
+
+                {/* Botones de previsualización */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const t = templates.find(x => x.name === campaignData.selectedTemplate);
+                      if (!t) {
+                        alert('Plantilla no encontrada');
+                        return;
+                      }
+                      const html = (t.html && t.html.trim())
+                        ? t.html
+                        : `<pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;padding:16px">${(t.text || '')
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')}</pre>`;
+                      const previewWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+                      if (!previewWindow) {
+                        alert('Bloqueador de ventanas emergentes activo. Permite las ventanas emergentes.');
+                        return;
+                      }
+                      previewWindow.document.open();
+                      previewWindow.document.write(html);
+                      previewWindow.document.close();
+                    }}
+                    disabled={!campaignData.selectedTemplate}
+                  >
+                    Previsualizar plantilla
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const p = landingPages.find(x => x.name === campaignData.selectedLandingPage);
+                      if (!p) {
+                        alert('Página de destino no encontrada');
+                        return;
+                      }
+                      const html = p.html || '<div style="padding:16px">Sin contenido HTML</div>';
+                      const previewWindow = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+                      if (!previewWindow) {
+                        alert('Bloqueador de ventanas emergentes activo. Permite las ventanas emergentes.');
+                        return;
+                      }
+                      previewWindow.document.open();
+                      previewWindow.document.write(html);
+                      previewWindow.document.close();
+                    }}
+                    disabled={!campaignData.selectedLandingPage}
+                  >
+                    Previsualizar landing
+                  </Button>
+                </div>
                 
                 {error && (
                   <Alert variant="destructive">
