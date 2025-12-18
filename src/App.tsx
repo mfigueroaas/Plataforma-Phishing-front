@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { Menu, Shield } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
 import Groups from './components/groups/Groups';
+import { PerformanceDebug } from './components/ui/performance-debug';
 
 
 export default function App() {
@@ -50,10 +51,10 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
+          <Shield className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-sm text-muted-foreground">Verificando sesión...</p>
         </div>
       </div>
     );
@@ -229,6 +230,9 @@ export default function App() {
       <main className="flex-1 overflow-auto">
         {renderMainContent()}
       </main>
+      
+      {/* Debug de performance - solo en desarrollo */}
+      <PerformanceDebug />
     </div>
   );
 }
