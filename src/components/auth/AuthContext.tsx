@@ -43,14 +43,22 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  // Cargar estado cacheado inmediatamente para UI rápida
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('auth_user_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
   // Listener real de Firebase Auth + sincronización con backend y Firestore
   useEffect(() => {
     let unsubscribeAuth: (() => void) | undefined;
-    let unsubscribeToken: (() => void) | undefined;
+    let isInitialLoad = true;
 
     (async () => {
       try {
@@ -59,11 +67,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           import('../../firebase/config'),
           import('firebase/firestore'),
         ]);
-        const { onAuthStateChanged, onIdTokenChanged } = authExports;
+        const { onAuthStateChanged } = authExports;
         const { auth, db } = firebaseConfig as any;
-        const { doc, getDoc, setDoc } = firestoreExports;
+        const { doc, setDoc } = firestoreExports;
 
         unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: any) => {
+          const perfStart = performance.now();
           console.log('[Auth] onAuthStateChanged:', !!firebaseUser);
           if (firebaseUser) {
             try {
@@ -72,58 +81,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
               setAuthToken(idToken);
               console.log('[Auth] Token set');
 
-              // Firestore opcional
-              let fsData: any = {};
-              try {
-                const ref = doc(db, 'users', firebaseUser.uid);
-                const snap = await getDoc(ref);
-                fsData = snap.exists() ? snap.data() : {};
-                // No bloquea si falla
-                try {
-                  if (!snap.exists()) {
-                    await setDoc(ref, {
-                      email: firebaseUser.email || '',
-                      department: 'Sin asignar',
-                      createdAt: new Date().toISOString(),
-                      lastLogin: new Date().toISOString(),
-                    }, { merge: true });
-                  } else {
-                    await setDoc(ref, { lastLogin: new Date().toISOString() }, { merge: true });
-                  }
-                } catch (e) {
-                  console.warn('[Auth] No se pudo escribir lastLogin en Firestore:', e);
-                }
-              } catch (firestoreError) {
-                console.warn('[Auth] Firestore no disponible:', firestoreError);
+              // Firestore: solo actualizar lastLogin en segundo plano (no bloquea)
+              if (isInitialLoad) {
+                setDoc(doc(db, 'users', firebaseUser.uid), {
+                  email: firebaseUser.email || '',
+                  lastLogin: new Date().toISOString(),
+                }, { merge: true }).catch(e => console.warn('[Auth] Firestore update failed:', e));
               }
 
-              // Backend: /users/me
-              try {
-                const backendProfile = await apiUsers.me();
-                console.log('[Auth] /users/me OK:', backendProfile);
-                setUser({
-                  id: backendProfile.id,
-                  uid: backendProfile.firebase_uid,
-                  email: backendProfile.email,
-                  // ⬇️ PRIORIZAR displayName de Firebase sobre backend
-                  name: firebaseUser.displayName || backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
-                  role: backendProfile.role,
-                  department: fsData?.department || 'Sin asignar',
-                  lastLogin: new Date().toISOString(),
-                });
-              } catch (apiError: any) {
-                console.error('[Auth] /users/me error:', apiError?.message || apiError);
-                // Fallback con Firebase
-                setUser({
-                  id: 0,
-                  uid: firebaseUser.uid,
-                  email: firebaseUser.email || '',
-                  // ⬇️ displayName de Firebase
-                  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
-                  role: 'viewer',
-                  department: fsData?.department || 'Sin asignar',
-                  lastLogin: new Date().toISOString(),
-                });
+              // Backend: /users/me - solo llamar UNA VEZ en carga inicial
+              if (isInitialLoad) {
+                try {
+                  const backendProfile = await apiUsers.me();
+                  console.log('[Auth] /users/me OK');
+                  const userData = {
+                    id: backendProfile.id,
+                    uid: backendProfile.firebase_uid,
+                    email: backendProfile.email,
+                    name: firebaseUser.displayName || backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario',
+                    role: backendProfile.role,
+                    department: 'Sin asignar',
+                    lastLogin: new Date().toISOString(),
+                  };
+                  setUser(userData);
+                  // Cachear para próxima carga
+                  sessionStorage.setItem('auth_user_cache', JSON.stringify(userData));
+                } catch (apiError: any) {
+                  console.error('[Auth] /users/me error:', apiError?.message || apiError);
+                  // Fallback con Firebase
+                  const fallbackUser = {
+                    id: 0,
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email || '',
+                    name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
+                    role: 'viewer' as const,
+                    department: 'Sin asignar',
+                    lastLogin: new Date().toISOString(),
+                  };
+                  setUser(fallbackUser);
+                  sessionStorage.setItem('auth_user_cache', JSON.stringify(fallbackUser));
+                }
+                isInitialLoad = false;
               }
             } catch (tokenError) {
               console.error('[Auth] getIdToken error:', tokenError);
@@ -135,53 +133,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setUser(null);
             setToken(null);
             setAuthToken(null);
+            sessionStorage.removeItem('auth_user_cache'); // Limpiar cache
+            isInitialLoad = true; // Reset para próximo login
           }
           setLoading(false);
-        });
-
-        // Importante: al refrescar token, también intentamos actualizar el perfil si ya hay usuario
-        unsubscribeToken = onIdTokenChanged(auth, async (firebaseUser: any) => {
-          console.log('[Auth] onIdTokenChanged:', !!firebaseUser);
-          if (firebaseUser) {
-            try {
-              const freshToken = await firebaseUser.getIdToken();
-              setToken(freshToken);
-              setAuthToken(freshToken);
-              console.log('[Auth] Token refreshed');
-
-              // Si ya hay user, refrescamos su perfil del backend (roles pueden cambiar)
-              try {
-                const backendProfile = await apiUsers.me();
-                console.log('[Auth] /users/me on token refresh OK');
-                
-                // ⬇️ Obtener displayName actualizado de Firebase
-                const displayName = firebaseUser.displayName || backendProfile.name || firebaseUser.email?.split('@')[0] || 'Usuario';
-                
-                setUser(prev => {
-                  const base = prev || {
-                    id: backendProfile.id,
-                    uid: backendProfile.firebase_uid,
-                    email: backendProfile.email,
-                    name: displayName,
-                    department: 'Sin asignar',
-                    lastLogin: new Date().toISOString(),
-                  };
-                  return {
-                    ...base,
-                    id: backendProfile.id,
-                    uid: backendProfile.firebase_uid,
-                    email: backendProfile.email,
-                    name: displayName, // ⬅️ Firebase displayName
-                    role: backendProfile.role,
-                  };
-                });
-              } catch (apiError) {
-                console.warn('[Auth] /users/me failed on token refresh:', apiError);
-              }
-            } catch (e) {
-              console.warn('[Auth] Error refrescando token:', e);
-            }
-          }
+          const perfEnd = performance.now();
+          console.log(`[Auth] Auth check completed in ${(perfEnd - perfStart).toFixed(0)}ms`);
         });
       } catch (error) {
         console.error('[Auth] Firebase init error:', error);
@@ -191,7 +148,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => {
       if (unsubscribeAuth) unsubscribeAuth();
-      if (unsubscribeToken) unsubscribeToken();
     };
   }, []);
 
@@ -238,6 +194,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
     setToken(null);
     setAuthToken(null);
+    sessionStorage.removeItem('auth_user_cache'); // Limpiar cache
   };
 
   const resetPassword = async (email: string): Promise<void> => {

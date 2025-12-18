@@ -31,50 +31,102 @@ interface ConfigProviderProps {
 
 export function ConfigProvider({ children }: ConfigProviderProps) {
   const { user, token } = useAuth();
-  const [configs, setConfigs] = useState<GoPhishConfig[]>([]);
-  const [activeConfig, setActiveConfig] = useState<GoPhishConfig | null>(null);
+  // Cargar configs cacheadas inmediatamente
+  const [configs, setConfigs] = useState<GoPhishConfig[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('gophish_configs_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeConfig, setActiveConfig] = useState<GoPhishConfig | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('gophish_active_config_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar configuraciones al montar o cambiar usuario
+  // Cargar configuraciones al montar o cambiar usuario - OPTIMIZADO
   useEffect(() => {
+    let isMounted = true;
+    
     if (user && token) {
-      refreshConfigs();
+      // Solo cargar si no tenemos cache válido
+      const hasCache = configs.length > 0;
+      if (!hasCache) {
+        refreshConfigs();
+      } else {
+        // Ya tenemos cache, solo marcar como no loading
+        setLoading(false);
+      }
+      
+      // Refrescar en segundo plano después de 500ms si hay cache
+      if (hasCache && isMounted) {
+        setTimeout(() => {
+          if (isMounted) {
+            refreshConfigs();
+          }
+        }, 500);
+      }
     } else {
       setConfigs([]);
       setActiveConfig(null);
+      sessionStorage.removeItem('gophish_configs_cache');
+      sessionStorage.removeItem('gophish_active_config_cache');
       setLoading(false);
     }
-  }, [user, token]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // Solo depender de user.id, no del token que cambia constantemente
 
   const refreshConfigs = async () => {
     if (!token) return;
     
+    const perfStart = performance.now();
     setLoading(true);
     setError(null);
+    
+    // Optimización: leer savedConfigId antes de la llamada API
+    const savedConfigId = localStorage.getItem('activeGoPhishConfigId');
+    
     try {
       const data = await apiGoPhishConfigs.list();
       setConfigs(data);
+      sessionStorage.setItem('gophish_configs_cache', JSON.stringify(data)); // Cache
       
       // Recuperar última configuración activa del localStorage
-      const savedConfigId = localStorage.getItem('activeGoPhishConfigId');
+      let selectedConfig = null;
       if (savedConfigId) {
         const saved = data.find(c => c.id === parseInt(savedConfigId));
         if (saved) {
-          setActiveConfig(saved);
+          selectedConfig = saved;
         } else if (data.length > 0) {
-          setActiveConfig(data[0]);
+          selectedConfig = data[0];
           localStorage.setItem('activeGoPhishConfigId', data[0].id.toString());
         }
       } else if (data.length > 0) {
-        setActiveConfig(data[0]);
+        selectedConfig = data[0];
         localStorage.setItem('activeGoPhishConfigId', data[0].id.toString());
+      }
+      
+      if (selectedConfig) {
+        setActiveConfig(selectedConfig);
+        sessionStorage.setItem('gophish_active_config_cache', JSON.stringify(selectedConfig));
       }
     } catch (e: any) {
       setError(e.message || 'Error al cargar configuraciones');
       console.error('Error cargando configs:', e);
     } finally {
       setLoading(false);
+      const perfEnd = performance.now();
+      console.log(`[Config] Configs loaded in ${(perfEnd - perfStart).toFixed(0)}ms`);
     }
   };
 
@@ -83,6 +135,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     if (config) {
       setActiveConfig(config);
       localStorage.setItem('activeGoPhishConfigId', id.toString());
+      sessionStorage.setItem('gophish_active_config_cache', JSON.stringify(config));
     }
   };
 
