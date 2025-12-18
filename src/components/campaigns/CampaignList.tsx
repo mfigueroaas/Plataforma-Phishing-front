@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
-import { apiCampaigns, Campaign } from '../../lib/api/client';
+import { apiCampaigns, Campaign, CampaignResult, CampaignSummary } from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -16,7 +16,8 @@ import {
   Pause,
   Eye,
   Download,
-  Trash2
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -34,6 +35,8 @@ import {
   TableRow 
 } from '../ui/table';
 import { Progress } from '../ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Separator } from '../ui/separator';
 
 interface CampaignListProps {
   onCreateClick: () => void;
@@ -47,6 +50,15 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [summaryMap, setSummaryMap] = useState<Record<number, CampaignSummary>>({});
+
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [summary, setSummary] = useState<CampaignSummary | null>(null);
+  const [results, setResults] = useState<CampaignResult[]>([]);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState(false);
 
   const loadCampaigns = async () => {
     if (!activeConfig?.id) return;
@@ -55,10 +67,30 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     try {
       const data = await apiCampaigns.list(activeConfig.id);
       setCampaigns(data);
+      fetchSummaries(data);
     } catch (e: any) {
       setError(e?.message || 'Error al cargar campañas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSummaries = async (items: Campaign[]) => {
+    if (!activeConfig?.id) return;
+    const toFetch = items.filter(c => !summaryMap[c.local_id]);
+    if (toFetch.length === 0) return;
+    try {
+      const responses = await Promise.all(toFetch.map(c => apiCampaigns.summary(activeConfig.id!, c.local_id)));
+      setSummaryMap(prev => {
+        const next = { ...prev } as Record<number, CampaignSummary>;
+        responses.forEach((res, idx) => {
+          const campId = toFetch[idx].local_id;
+          next[campId] = res;
+        });
+        return next;
+      });
+    } catch (e) {
+      console.error('Error fetching campaign summaries', e);
     }
   };
 
@@ -104,10 +136,93 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     return Math.round((numerator / denominator) * 100);
   };
 
+  const openDetails = async (campaign: Campaign) => {
+    if (!activeConfig?.id) return;
+    setSelectedCampaign(campaign);
+    setSummary(null);
+    setResults([]);
+    setTimeline([]);
+    setDetailsError(null);
+    setDetailsLoading(true);
+    setDetailMode(true);
+    try {
+      const [summaryResp, resultsResp] = await Promise.all([
+        apiCampaigns.summary(activeConfig.id, campaign.local_id),
+        apiCampaigns.results(activeConfig.id, campaign.local_id)
+      ]);
+      setSummary(summaryResp);
+      setResults(resultsResp.results || []);
+      setTimeline(resultsResp.timeline || []);
+    } catch (e: any) {
+      setDetailsError(e?.message || 'Error al cargar detalles');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const buildCsv = (rows: CampaignResult[]) => {
+    const headers = ['email','first_name','last_name','position','status','send_date','reported','ip'];
+    const escape = (value: any) => {
+      const str = value === undefined || value === null ? '' : String(value);
+      if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+    const lines = [headers.join(',')];
+    rows.forEach(r => {
+      lines.push([
+        escape(r.email),
+        escape(r.first_name),
+        escape(r.last_name),
+        escape(r.position),
+        escape(r.status),
+        escape(r.send_date),
+        escape(r.reported),
+        escape(r.ip)
+      ].join(','));
+    });
+    return lines.join('\n');
+  };
+
+  const exportResults = async (campaign: Campaign) => {
+    if (!activeConfig?.id) return;
+    setDetailsError(null);
+    let data = results;
+    if (campaign.local_id !== selectedCampaign?.local_id || results.length === 0) {
+      try {
+        const resp = await apiCampaigns.results(activeConfig.id, campaign.local_id);
+        data = resp.results || [];
+      } catch (e: any) {
+        setDetailsError(e?.message || 'Error al exportar resultados');
+        return;
+      }
+    }
+    const csv = buildCsv(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${campaign.name.replace(/\s+/g, '_')}_resultados.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const filteredCampaigns = campaigns.filter(campaign =>
     campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     campaign.template_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const exitDetails = () => {
+    setDetailMode(false);
+    setSelectedCampaign(null);
+    setSummary(null);
+    setResults([]);
+    setTimeline([]);
+    setDetailsError(null);
+  };
 
   if (!activeConfig?.id) {
     return (
@@ -118,6 +233,177 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             Selecciona una configuración de GoPhish para ver las campañas.
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  if (detailMode && selectedCampaign) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={exitDetails}>
+              <ArrowLeft className="w-4 h-4" />
+              Volver
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold">{selectedCampaign.name}</h1>
+              <p className="text-muted-foreground text-sm">
+                Plantilla: {selectedCampaign.template_name} · Landing: {selectedCampaign.page_name}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
+        </div>
+
+        {detailsError && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{detailsError}</AlertDescription>
+          </Alert>
+        )}
+
+        {detailsLoading ? (
+          <Card>
+            <CardContent className="py-10 text-sm text-muted-foreground">Cargando detalles…</CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent>
+              <Tabs defaultValue="summary">
+                <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsTrigger value="summary">Resumen</TabsTrigger>
+                  <TabsTrigger value="results">Resultados</TabsTrigger>
+                  <TabsTrigger value="timeline">Línea de tiempo</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="summary" className="space-y-4">
+                  {summary ? (
+                    <div className="space-y-3">
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                        <div className="border rounded-md p-3">
+                          <p className="text-muted-foreground">Estado</p>
+                          <p className="font-semibold">{summary.status}</p>
+                        </div>
+                        <div className="border rounded-md p-3">
+                          <p className="text-muted-foreground">Creada</p>
+                          <p className="font-semibold">{new Date(summary.created_date).toLocaleString()}</p>
+                        </div>
+                        <div className="border rounded-md p-3">
+                          <p className="text-muted-foreground">Lanzamiento</p>
+                          <p className="font-semibold">{summary.launch_date ? new Date(summary.launch_date).toLocaleString() : '—'}</p>
+                        </div>
+                        <div className="border rounded-md p-3">
+                          <p className="text-muted-foreground">Send by</p>
+                          <p className="font-semibold">{summary.send_by_date && summary.send_by_date !== '0001-01-01T00:00:00Z' ? new Date(summary.send_by_date).toLocaleString() : '—'}</p>
+                        </div>
+                        <div className="border rounded-md p-3">
+                          <p className="text-muted-foreground">Completada</p>
+                          <p className="font-semibold">{summary.completed_date && summary.completed_date !== '0001-01-01T00:00:00Z' ? new Date(summary.completed_date).toLocaleString() : '—'}</p>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="grid sm:grid-cols-3 lg:grid-cols-7 gap-3 text-sm">
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Total</p>
+                          <p className="text-xl font-semibold">{summary.stats.total}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Enviados</p>
+                          <p className="text-xl font-semibold">{summary.stats.sent}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Abiertos</p>
+                          <p className="text-xl font-semibold">{summary.stats.opened}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Clicks</p>
+                          <p className="text-xl font-semibold">{summary.stats.clicked}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Form. enviados</p>
+                          <p className="text-xl font-semibold">{summary.stats.submitted_data}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Reportados</p>
+                          <p className="text-xl font-semibold">{summary.stats.email_reported}</p>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <p className="text-muted-foreground">Errores</p>
+                          <p className="text-xl font-semibold">{summary.stats.error}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">Sin resumen.</div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="results">
+                  {results.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Aún no hay resultados.</div>
+                  ) : (
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Nombre</TableHead>
+                            <TableHead>Apellido</TableHead>
+                            <TableHead>Cargo</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Enviado</TableHead>
+                            <TableHead>IP</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {results.map((r, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="text-sm">{r.email}</TableCell>
+                              <TableCell className="text-sm">{r.first_name || '—'}</TableCell>
+                              <TableCell className="text-sm">{r.last_name || '—'}</TableCell>
+                              <TableCell className="text-sm">{r.position || '—'}</TableCell>
+                              <TableCell className="text-sm">{r.status}</TableCell>
+                              <TableCell className="text-sm">{r.send_date ? new Date(r.send_date).toLocaleString() : '—'}</TableCell>
+                              <TableCell className="text-sm">{r.ip || '—'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="timeline">
+                  {timeline.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Sin eventos.</div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-auto pr-2">
+                      {timeline.map((item, idx) => (
+                        <div key={idx} className="border rounded-md p-3 text-sm">
+                          <div className="flex justify-between gap-3">
+                            <p className="font-medium">{item.message}</p>
+                            <span className="text-muted-foreground text-xs">{item.time ? new Date(item.time).toLocaleString() : ''}</span>
+                          </div>
+                          {item.email && <p className="text-muted-foreground text-xs">{item.email}</p>}
+                          {item.details && <p className="text-xs break-words mt-1 text-muted-foreground">{item.details}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -196,7 +482,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
               </TableHeader>
               <TableBody>
                 {filteredCampaigns.map((campaign) => {
-                  const stats = campaign.stats || { total: 0, sent: 0, opened: 0, clicked: 0, email_reported: 0, submitted_data: 0, error: 0 };
+                  const stats = (summaryMap[campaign.local_id]?.stats) || campaign.stats || { total: 0, sent: 0, opened: 0, clicked: 0, email_reported: 0, submitted_data: 0, error: 0 };
                   
                   return (
                     <TableRow key={campaign.local_id}>
@@ -246,7 +532,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {new Date(campaign.created_date).toLocaleDateString('es-CL')}
+                          {new Date((summaryMap[campaign.local_id]?.created_date) || campaign.created_date).toLocaleDateString('es-CL')}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -257,11 +543,11 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDetails(campaign)}>
                               <Eye className="w-4 h-4 mr-2" />
                               Ver Detalles
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportResults(campaign)}>
                               <Download className="w-4 h-4 mr-2" />
                               Exportar Resultados
                             </DropdownMenuItem>
