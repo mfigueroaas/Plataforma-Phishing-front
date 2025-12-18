@@ -402,6 +402,25 @@ export interface Campaign {
   stats?: CampaignStat;
 }
 
+export interface CampaignSummary {
+  id: number;
+  name: string;
+  status: string;
+  created_date: string;
+  launch_date?: string;
+  send_by_date?: string;
+  completed_date?: string;
+  stats: CampaignStat;
+}
+
+export interface CampaignResultsResponse {
+  id: number;
+  name: string;
+  status: string;
+  results: CampaignResult[];
+  timeline: any[];
+}
+
 export interface CampaignCreate {
   name: string;
   template_name: string;
@@ -428,6 +447,12 @@ export const apiCampaigns = {
 
   delete: (configId: number, id: number): Promise<void> =>
     apiFetch(`/gophish/${configId}/campaigns/${id}/remote`, { method: 'DELETE' })
+
+  ,summary: (configId: number, id: number): Promise<CampaignSummary> =>
+    apiFetch(`/gophish/${configId}/campaigns/${id}/summary`),
+
+  results: (configId: number, id: number): Promise<CampaignResultsResponse> =>
+    apiFetch(`/gophish/${configId}/campaigns/${id}/results`)
 };
 
 // ============ PÁGINAS DE DESTINO (LANDING PAGES) ============
