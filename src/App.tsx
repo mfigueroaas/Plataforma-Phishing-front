@@ -15,6 +15,8 @@ import { Menu, Shield } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
 import Groups from './components/groups/Groups';
 import { PerformanceDebug } from './components/ui/performance-debug';
+import { SecurityDashboard } from './components/security/SecurityDashboard';
+import { ErrorBoundary } from './components/ui/error-boundary';
 
 
 export default function App() {
@@ -118,6 +120,12 @@ export default function App() {
         return <LandingPages />;
       case 'sending':
         return <SendingProfiles />;
+      case 'security':
+        return (
+          <ErrorBoundary>
+            <SecurityDashboard />
+          </ErrorBoundary>
+        );
       case 'management':
         return (
           <div className="p-4 sm:p-6">
