@@ -69,6 +69,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailMode, setDetailMode] = useState(false);
    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [reportBaseByCampaign, setReportBaseByCampaign] = useState<Record<number, string>>({});
 
   const loadCampaigns = async () => {
     if (!activeConfig?.id) return;
@@ -351,6 +352,88 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     return 'email_sent';
   };
 
+  // Funciones para manejar reportes
+  const getReportBaseForCampaign = (camp: Campaign): string | null => {
+    // Preferir la URL que venga del backend
+    if ((camp as any).url && typeof (camp as any).url === 'string') return (camp as any).url as string;
+    // Luego, si el usuario ya la ingresó para esta campaña
+    const remembered = reportBaseByCampaign[camp.local_id];
+    if (remembered) return remembered;
+    // Pedir al usuario y guardar
+    const input = window.prompt('Ingresa la URL base de la landing page (ej: https://phish.tu-dominio.com):');
+    if (!input) return null;
+    setReportBaseByCampaign(prev => ({ ...prev, [camp.local_id]: input.trim() }));
+    return input.trim();
+  };
+
+  const buildReportUrl = (base: string, rid: string) => {
+    try {
+      const u = new URL(base);
+      const cleanPath = u.pathname.replace(/\/+$/, '');
+      u.pathname = `${cleanPath}/report`;
+      u.search = `rid=${encodeURIComponent(rid)}`;
+      return u.toString();
+    } catch {
+      const b = base.replace(/\/+$/, '');
+      return `${b}/report?rid=${encodeURIComponent(rid)}`;
+    }
+  };
+
+  const sendReportBeacon = (url: string) => {
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url + (url.includes('?') ? '&_ts=' : '?_ts=') + Date.now();
+    });
+  };
+
+  const getRidForResult = (r: CampaignResult): string | null => {
+    if ((r as any).id) return String((r as any).id);
+    // Buscar en timeline del usuario
+    const userTimeline = timeline.filter((t) => t.email === r.email);
+    for (const item of userTimeline) {
+      const parsed = parsePayloadDetails(item.details);
+      const rid = getFirstValue(parsed?.payload, 'rid');
+      if (rid) return rid;
+    }
+    // Último intento: del propio details del row
+    const rowParsed = parsePayloadDetails(r.details);
+    const rid = getFirstValue(rowParsed?.payload, 'rid');
+    return rid || null;
+  };
+
+  const handleReport = async (r: CampaignResult) => {
+    if (!selectedCampaign) {
+      alert('Primero abre los detalles de una campaña.');
+      return;
+    }
+    const rid = getRidForResult(r);
+    if (!rid) {
+      alert('No se pudo determinar el RID de este envío.');
+      return;
+    }
+    const base = getReportBaseForCampaign(selectedCampaign);
+    if (!base) return;
+
+    const url = buildReportUrl(base, rid);
+
+    try {
+      await fetch(url, { method: 'GET', mode: 'no-cors' });
+    } catch {
+      // ignorar
+    }
+    await sendReportBeacon(url);
+
+    // Actualizar UI localmente
+    setResults(prev =>
+      prev.map(row =>
+        row === r ? ({ ...row, reported: true } as any) : row
+      )
+    );
+    alert('Reporte enviado correctamente.');
+  };
+
   if (!activeConfig?.id) {
     return (
       <div className="p-6">
@@ -514,17 +597,31 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                                 <TableCell className="text-sm">{r.send_date ? new Date(r.send_date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</TableCell>
                                 <TableCell className="text-sm">{r.ip || '—'}</TableCell>
                                 <TableCell className="text-right">
-                                  {showToggle && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => toggleRowExpansion(idx)}
-                                      className="gap-1"
-                                    >
-                                      <ChevronDown className="w-4 h-4" />
-                                      Timeline
-                                    </Button>
-                                  )}
+                                  <div className="flex items-center justify-end gap-1">
+                                    {!r.reported && summary?.status && !summary.status.toLowerCase().includes('complet') && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleReport(r)}
+                                        className="gap-1"
+                                        title="Marcar este envío como reportado (solo disponible cuando la campaña no está completada)"
+                                      >
+                                        <Flag className="w-4 h-4" />
+                                        Reportar
+                                      </Button>
+                                    )}
+                                    {showToggle && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleRowExpansion(idx)}
+                                        className="gap-1"
+                                      >
+                                        <ChevronDown className="w-4 h-4" />
+                                        Timeline
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
 

@@ -52,14 +52,14 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'campaigns', icon: Target, label: 'Campañas' },
-    { id: 'security', icon: Shield, label: 'Detección de URL' },
-    { id: 'users', icon: Users, label: 'Usuarios y Grupos' },
-    { id: 'templates', icon: Mail, label: 'Plantillas de Email' },
-    { id: 'landing', icon: Globe, label: 'Páginas de Destino' },
-    { id: 'sending', icon: Send, label: 'Perfiles de Envío' },
-    { id: 'account', icon: Settings, label: 'Configuración de Cuenta' },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', badge: undefined },
+    { id: 'campaigns', icon: Target, label: 'Campañas', badge: undefined },
+    { id: 'security', icon: Shield, label: 'Detección de URL', badge: undefined },
+    { id: 'users', icon: Users, label: 'Usuarios y Grupos', badge: undefined },
+    { id: 'templates', icon: Mail, label: 'Plantillas de Email', badge: undefined },
+    { id: 'landing', icon: Globe, label: 'Páginas de Destino', badge: undefined },
+    { id: 'sending', icon: Send, label: 'Perfiles de Envío', badge: undefined },
+    { id: 'account', icon: Settings, label: 'Configuración de Cuenta', badge: undefined },
   ];
 
   const adminItems = [

@@ -74,7 +74,15 @@ export default function App() {
 
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return (
+          <Dashboard
+            onCreateClick={() => {
+              setCurrentPage('campaigns');
+              setIsCreatingCampaign(true);
+            }}
+            onViewDetails={() => setCurrentPage('campaigns')}
+          />
+        );
       case 'campaigns':
         return <CampaignList onCreateClick={() => setIsCreatingCampaign(true)} />;
       case 'detection':
