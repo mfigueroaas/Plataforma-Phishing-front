@@ -1,26 +1,25 @@
 import { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Target, 
-  Users, 
-  Mail, 
-  Globe, 
-  Send, 
-  Settings, 
-  UserCheck, 
-  Webhook,
+import {
+  LayoutDashboard,
+  Target,
+  Users,
+  Mail,
+  Globe,
+  Send,
+  Settings,
+  UserCheck,
   BookOpen,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Shield,
   LogOut,
-  User
+  User,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Separator } from '../ui/separator';
+import { ProfileDialog } from '../profile/ProfileDialog';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -50,12 +49,12 @@ interface SidebarProps {
 
 export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = false }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'campaigns', icon: Target, label: 'Campañas' },
-    { id: 'detection', icon: Shield, label: 'Detección' },
-    { id: 'security', icon: Shield, label: 'Security Dashboard', badge: 'New' },
+    { id: 'security', icon: Shield, label: 'Detección de URL' },
     { id: 'users', icon: Users, label: 'Usuarios y Grupos' },
     { id: 'templates', icon: Mail, label: 'Plantillas de Email' },
     { id: 'landing', icon: Globe, label: 'Páginas de Destino' },
@@ -65,12 +64,10 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
 
   const adminItems = [
     { id: 'management', icon: UserCheck, label: 'Gestión de Usuarios', badge: 'Admin' },
-    { id: 'webhooks', icon: Webhook, label: 'Webhooks', badge: 'Admin' },
   ];
 
   const helpItems = [
     { id: 'guide', icon: BookOpen, label: 'Guía de Usuario' },
-    { id: 'api', icon: FileText, label: 'Documentación API' },
   ];
 
   // Helper para obtener iniciales de forma segura
@@ -140,7 +137,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
               
               <DropdownMenuSeparator />
               
-              <DropdownMenuItem onClick={() => onPageChange('account')}>
+              <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Mi Perfil</span>
               </DropdownMenuItem>
@@ -193,7 +190,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
               
               <DropdownMenuSeparator />
               
-              <DropdownMenuItem onClick={() => onPageChange('account')}>
+              <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Mi Perfil</span>
               </DropdownMenuItem>
@@ -305,6 +302,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
           v1.0.0
         </div>
       )}
+
+      {/* Profile Dialog */}
+      <ProfileDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
     </div>
   );
 }
