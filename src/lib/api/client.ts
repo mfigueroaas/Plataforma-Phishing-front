@@ -382,6 +382,7 @@ export interface CampaignResult {
   send_date?: string;
   reported?: boolean;
   modified_date?: string;
+   details?: string;
 }
 
 export interface Campaign {
@@ -446,9 +447,12 @@ export const apiCampaigns = {
     }),
 
   delete: (configId: number, id: number): Promise<void> =>
-    apiFetch(`/gophish/${configId}/campaigns/${id}/remote`, { method: 'DELETE' })
+    apiFetch(`/gophish/${configId}/campaigns/${id}/remote`, { method: 'DELETE' }),
 
-  ,summary: (configId: number, id: number): Promise<CampaignSummary> =>
+  complete: (configId: number, id: number): Promise<Campaign> =>
+    apiFetch(`/gophish/${configId}/campaigns/${id}/complete`, { method: 'POST' }),
+
+  summary: (configId: number, id: number): Promise<CampaignSummary> =>
     apiFetch(`/gophish/${configId}/campaigns/${id}/summary`),
 
   results: (configId: number, id: number): Promise<CampaignResultsResponse> =>

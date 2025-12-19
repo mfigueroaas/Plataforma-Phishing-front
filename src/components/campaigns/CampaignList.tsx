@@ -17,7 +17,15 @@ import {
   Eye,
   Download,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+    CheckCircle,
+    ChevronDown,
+    ChevronRight,
+    MousePointer,
+    AlertTriangle,
+    Send,
+    Flag,
+    Clock
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -37,6 +45,7 @@ import {
 import { Progress } from '../ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Separator } from '../ui/separator';
+import { AuditTimeline } from '../ui/audit-timeline';
 
 interface CampaignListProps {
   onCreateClick: () => void;
@@ -59,6 +68,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailMode, setDetailMode] = useState(false);
+   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const loadCampaigns = async () => {
     if (!activeConfig?.id) return;
@@ -224,6 +234,123 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     setDetailsError(null);
   };
 
+  const handleComplete = async (campaign: Campaign) => {
+    if (!activeConfig?.id || !confirm('¿Marcar esta campaña como completada?')) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await apiCampaigns.complete(activeConfig.id, campaign.local_id);
+      await loadCampaigns();
+      if (detailMode && selectedCampaign?.local_id === campaign.local_id) {
+        exitDetails();
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Error al completar campaña');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+   const toggleRowExpansion = (index: number) => {
+     setExpandedRows(prev => {
+       const next = new Set(prev);
+       if (next.has(index)) {
+         next.delete(index);
+       } else {
+         next.add(index);
+       }
+       return next;
+     });
+   };
+
+   const parsePayloadDetails = (details?: string) => {
+     if (!details) return null;
+     try {
+       const parsed = JSON.parse(details);
+       return parsed;
+     } catch {
+       return null;
+     }
+   };
+
+  const getFirstValue = (obj: any, key: string): string | undefined => {
+    if (!obj || !(key in obj)) return undefined;
+    const v = obj[key];
+    if (Array.isArray(v)) return v[0];
+    if (typeof v === 'string') return v;
+    return undefined;
+  };
+
+  const extractSubmittedInfo = (payload: any) => {
+    return {
+      originalUrl: getFirstValue(payload, '__original_url'),
+      username: getFirstValue(payload, 'username') || getFirstValue(payload, 'user[email]'),
+      password: getFirstValue(payload, 'password'),
+      rid: getFirstValue(payload, 'rid'),
+    };
+  };
+
+  const parseUserAgentInfo = (ua?: string) => {
+    if (!ua) return {} as { browser?: string; browserVersion?: string; os?: string; osVersion?: string };
+    const info: { browser?: string; browserVersion?: string; os?: string; osVersion?: string } = {};
+    // OS
+    const winMatch = ua.match(/Windows NT ([0-9.]+)/i);
+    if (winMatch) {
+      info.os = 'Windows';
+      info.osVersion = winMatch[1];
+    } else if (/Mac OS X/i.test(ua)) {
+      const m = ua.match(/Mac OS X ([0-9_]+)/i);
+      info.os = 'macOS';
+      info.osVersion = m ? m[1].replace(/_/g, '.') : undefined;
+    } else if (/Android/i.test(ua)) {
+      const m = ua.match(/Android ([0-9.]+)/i);
+      info.os = 'Android';
+      info.osVersion = m ? m[1] : undefined;
+    } else if (/Linux/i.test(ua)) {
+      info.os = 'Linux';
+    }
+    // Browser
+    const edge = ua.match(/Edg\/([0-9.]+)/);
+    const chrome = ua.match(/Chrome\/([0-9.]+)/);
+    const firefox = ua.match(/Firefox\/([0-9.]+)/);
+    const safari = (!chrome && ua.match(/Safari\/([0-9.]+)/)) || null;
+    if (edge) { info.browser = 'Edge'; info.browserVersion = edge[1]; }
+    else if (chrome) { info.browser = 'Chrome'; info.browserVersion = chrome[1]; }
+    else if (firefox) { info.browser = 'Firefox'; info.browserVersion = firefox[1]; }
+    else if (safari) { info.browser = 'Safari'; info.browserVersion = safari[1]; }
+    return info;
+  };
+
+  const getTimelineIcon = (type: string) => {
+    switch (type) {
+      case 'link_clicked':
+        return { Icon: MousePointer, className: 'text-red-600 bg-red-100' };
+      case 'data_submitted':
+        return { Icon: AlertTriangle, className: 'text-orange-600 bg-orange-100' };
+      case 'email_opened':
+        return { Icon: Eye, className: 'text-yellow-600 bg-yellow-100' };
+      case 'email_sent':
+        return { Icon: Send, className: 'text-blue-600 bg-blue-100' };
+      case 'reported':
+        return { Icon: Flag, className: 'text-emerald-600 bg-emerald-100' };
+      default:
+        return { Icon: Clock, className: 'text-gray-600 bg-gray-100' };
+    }
+  };
+
+  const mapMessageType = (message: string) => {
+    const m = (message || '').toLowerCase();
+    if (m.includes('submitted')) return 'data_submitted';
+    if (m.includes('click') || m.includes('link')) return 'link_clicked';
+    if (m.includes('open')) return 'email_opened';
+    if (m.includes('sent') || m.includes('send')) return 'email_sent';
+    if (m.includes('report')) return 'reported';
+    if (m.includes('campaign') && m.includes('start')) return 'campaign_started';
+    if (m.includes('campaign') && m.includes('completed')) return 'campaign_completed';
+    return 'email_sent';
+  };
+
   if (!activeConfig?.id) {
     return (
       <div className="p-6">
@@ -248,9 +375,6 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             </Button>
             <div>
               <h1 className="text-xl font-semibold">{selectedCampaign.name}</h1>
-              <p className="text-muted-foreground text-sm">
-                Plantilla: {selectedCampaign.template_name} · Landing: {selectedCampaign.page_name}
-              </p>
             </div>
           </div>
 
@@ -258,6 +382,10 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)}>
               <Download className="w-4 h-4 mr-2" />
               Exportar CSV
+            </Button>
+            <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Marcar como completada
             </Button>
           </div>
         </div>
@@ -351,34 +479,194 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                   {results.length === 0 ? (
                     <div className="text-sm text-muted-foreground">Aún no hay resultados.</div>
                   ) : (
-                    <div className="border rounded-md overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Nombre</TableHead>
-                            <TableHead>Apellido</TableHead>
-                            <TableHead>Cargo</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead>Enviado</TableHead>
-                            <TableHead>IP</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {results.map((r, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="text-sm">{r.email}</TableCell>
-                              <TableCell className="text-sm">{r.first_name || '—'}</TableCell>
-                              <TableCell className="text-sm">{r.last_name || '—'}</TableCell>
-                              <TableCell className="text-sm">{r.position || '—'}</TableCell>
-                              <TableCell className="text-sm">{r.status}</TableCell>
-                              <TableCell className="text-sm">{r.send_date ? new Date(r.send_date).toLocaleString() : '—'}</TableCell>
-                              <TableCell className="text-sm">{r.ip || '—'}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Apellido</TableHead>
+                          <TableHead>Cargo</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Enviado</TableHead>
+                          <TableHead>IP</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {results.map((r, idx) => {
+                          const rowPayload = parsePayloadDetails(r.details);
+                          const isExpanded = expandedRows.has(idx);
+                          const userTimeline = timeline.filter((t) => t.email === r.email);
+                          const showToggle = userTimeline.length > 0 || !!rowPayload;
+
+                          return (
+                            <>
+                              <TableRow key={`row-${idx}`}>
+                                <TableCell className="text-sm">{r.email}</TableCell>
+                                <TableCell className="text-sm">{r.first_name || '—'}</TableCell>
+                                <TableCell className="text-sm">{r.last_name || '—'}</TableCell>
+                                <TableCell className="text-sm">{r.position || '—'}</TableCell>
+                                <TableCell className="text-sm">
+                                  <Badge variant={r.status === 'Submitted Data' ? 'destructive' : 'outline'}>
+                                    {r.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">{r.send_date ? new Date(r.send_date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</TableCell>
+                                <TableCell className="text-sm">{r.ip || '—'}</TableCell>
+                                <TableCell className="text-right">
+                                  {showToggle && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleRowExpansion(idx)}
+                                      className="gap-1"
+                                    >
+                                      <ChevronDown className="w-4 h-4" />
+                                      Timeline
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+
+                              {isExpanded && (
+                                <TableRow key={`expand-${idx}`}>
+                                  <TableCell colSpan={8}>
+                                    <div className="p-3 border rounded-md bg-muted/30">
+                                      <p className="text-xs font-semibold text-muted-foreground mb-2">Actividad del usuario</p>
+                                      {userTimeline.length === 0 && !rowPayload ? (
+                                        <p className="text-xs text-muted-foreground">Sin eventos para este usuario.</p>
+                                      ) : (
+                                        <div className="space-y-2 text-sm">
+                                          {userTimeline.map((item, i) => {
+                                            const itemPayload = parsePayloadDetails(item.details);
+                                            const type = mapMessageType(item.message);
+                                            const uaInfo = parseUserAgentInfo(itemPayload?.browser?.['user-agent']);
+                                            const submitted = itemPayload?.payload ? extractSubmittedInfo(itemPayload.payload) : undefined;
+                                            const { Icon, className } = getTimelineIcon(type);
+                                            return (
+                                              <div key={i} className="border rounded-md p-2 bg-background">
+                                                <div className="flex gap-3">
+                                                  <div className="flex flex-col items-center pt-1">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${className}`}>
+                                                      <Icon className="w-4 h-4" />
+                                                    </div>
+                                                    {i !== userTimeline.length - 1 && <div className="w-px flex-1 bg-border mt-2" />}
+                                                  </div>
+
+                                                  <div className="flex-1 space-y-1">
+                                                    <div className="flex justify-between gap-3">
+                                                      <p className="text-sm font-medium">{item.message}</p>
+                                                      <span className="text-muted-foreground text-xs">{item.time ? new Date(item.time).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
+                                                    </div>
+
+                                                    {type === 'link_clicked' && (
+                                                      <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs">
+                                                        <div className="border rounded-md p-2">
+                                                          <p className="font-semibold mb-1">Navegador</p>
+                                                          <p>{uaInfo.browser || '—'} {uaInfo.browserVersion || ''}</p>
+                                                        </div>
+                                                        <div className="border rounded-md p-2">
+                                                          <p className="font-semibold mb-1">Sistema</p>
+                                                          <p>{uaInfo.os || '—'} {uaInfo.osVersion ? `(NT ${uaInfo.osVersion})` : ''}</p>
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {type === 'data_submitted' && submitted && (
+                                                      <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs">
+                                                        <div className="border rounded-md p-2">
+                                                          <p className="font-semibold mb-1">Usuario</p>
+                                                          <p className="break-words">{submitted.username || '—'}</p>
+                                                        </div>
+                                                        <div className="border rounded-md p-2">
+                                                          <p className="font-semibold mb-1">Password</p>
+                                                          <p className="break-words">{submitted.password || '—'}</p>
+                                                        </div>
+                                                        <div className="border rounded-md p-2 sm:col-span-2">
+                                                          <p className="font-semibold mb-1">Original URL</p>
+                                                          {submitted.originalUrl ? (
+                                                            <a href={submitted.originalUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                                                              {submitted.originalUrl}
+                                                            </a>
+                                                          ) : (
+                                                            <p>—</p>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {type !== 'link_clicked' && type !== 'data_submitted' && item.details && (
+                                                      <p className="text-xs break-words mt-2 text-muted-foreground">{item.details}</p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+
+                                          {userTimeline.length === 0 && rowPayload && (
+                                            <div className="border rounded-md p-2 bg-background">
+                                              <div className="flex justify-between gap-3">
+                                                <p className="text-sm font-medium">{r.status}</p>
+                                                <span className="text-muted-foreground text-xs">{r.send_date ? new Date(r.send_date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
+                                              </div>
+                                              {(() => {
+                                                const statusLower = (r.status || '').toLowerCase();
+                                                if (statusLower.includes('click')) {
+                                                  const uaInfo = parseUserAgentInfo(rowPayload.browser?.['user-agent']);
+                                                  return (
+                                                    <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs">
+                                                      <div className="border rounded-md p-2">
+                                                        <p className="font-semibold mb-1">Navegador</p>
+                                                        <p>{uaInfo.browser || '—'} {uaInfo.browserVersion || ''}</p>
+                                                      </div>
+                                                      <div className="border rounded-md p-2">
+                                                        <p className="font-semibold mb-1">Sistema</p>
+                                                        <p>{uaInfo.os || '—'} {uaInfo.osVersion ? `(NT ${uaInfo.osVersion})` : ''}</p>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                }
+                                                if (statusLower.includes('submitted')) {
+                                                  const submitted = rowPayload.payload ? extractSubmittedInfo(rowPayload.payload) : undefined;
+                                                  return (
+                                                    <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs">
+                                                      <div className="border rounded-md p-2">
+                                                        <p className="font-semibold mb-1">Usuario</p>
+                                                        <p className="break-words">{submitted?.username || '—'}</p>
+                                                      </div>
+                                                      <div className="border rounded-md p-2">
+                                                        <p className="font-semibold mb-1">Password</p>
+                                                        <p className="break-words">{submitted?.password || '—'}</p>
+                                                      </div>
+                                                      <div className="border rounded-md p-2 sm:col-span-2">
+                                                        <p className="font-semibold mb-1">Original URL</p>
+                                                        {submitted?.originalUrl ? (
+                                                          <a href={submitted.originalUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                                                            {submitted.originalUrl}
+                                                          </a>
+                                                        ) : (
+                                                          <p>—</p>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                }
+                                                return null;
+                                              })()}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   )}
                 </TabsContent>
 
@@ -387,16 +675,31 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                     <div className="text-sm text-muted-foreground">Sin eventos.</div>
                   ) : (
                     <div className="space-y-3 max-h-[400px] overflow-auto pr-2">
-                      {timeline.map((item, idx) => (
-                        <div key={idx} className="border rounded-md p-3 text-sm">
-                          <div className="flex justify-between gap-3">
-                            <p className="font-medium">{item.message}</p>
-                            <span className="text-muted-foreground text-xs">{item.time ? new Date(item.time).toLocaleString() : ''}</span>
-                          </div>
-                          {item.email && <p className="text-muted-foreground text-xs">{item.email}</p>}
-                          {item.details && <p className="text-xs break-words mt-1 text-muted-foreground">{item.details}</p>}
-                        </div>
-                      ))}
+                      <AuditTimeline
+                        events={timeline.map((item: any, idx: number) => {
+                          const parsed = parsePayloadDetails(item.details);
+                          const metadata: Record<string, any> | undefined = parsed ? {
+                            ...(parsed.browser ? {
+                              'IP': parsed.browser.address,
+                              'User Agent': parsed.browser['user-agent']
+                            } : {}),
+                            ...(parsed.payload ? {
+                              'RID': Array.isArray(parsed.payload.rid) ? parsed.payload.rid[0] : parsed.payload.rid,
+                              'Commit': Array.isArray(parsed.payload.commit) ? parsed.payload.commit[0] : parsed.payload.commit,
+                            } : {})
+                          } : undefined;
+
+                          return {
+                            id: String(idx),
+                            type: mapMessageType(item.message),
+                            timestamp: item.time,
+                            user: item.email ? { name: item.email.split('@')[0], email: item.email, initials: (item.email[0] || '?').toUpperCase() } : undefined,
+                            details: parsed ? undefined : item.details,
+                            metadata,
+                          };
+                        })}
+                        showUserInfo
+                      />
                     </div>
                   )}
                 </TabsContent>
@@ -550,6 +853,10 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                             <DropdownMenuItem onClick={() => exportResults(campaign)}>
                               <Download className="w-4 h-4 mr-2" />
                               Exportar Resultados
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleComplete(campaign)}>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Marcar como completada
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
