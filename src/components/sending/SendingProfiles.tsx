@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
-import { useAuth } from '../auth/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { apiSendingProfiles, SendingProfile, SendingProfileCreate, SendingProfileHeader } from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -21,7 +21,7 @@ import { Send, Plus, Trash2, Edit, Loader2, AlertCircle, Mail, Server, Key, X } 
 
 export function SendingProfiles() {
   const { activeConfig } = useGoPhishConfig();
-  const { canCreate, canEdit, canDelete } = useAuth();
+  const { canCreateSendingProfiles, canEditSendingProfiles, canDeleteSendingProfiles } = usePermissions();
   
   const [profiles, setProfiles] = useState<SendingProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,7 +186,7 @@ export function SendingProfiles() {
             Gestiona los servidores SMTP para envío de correos
           </p>
         </div>
-        {canCreate() && (
+        {canCreateSendingProfiles && (
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Perfil
@@ -210,7 +210,7 @@ export function SendingProfiles() {
           <CardContent className="py-12 text-center">
             <Send className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No hay perfiles de envío configurados</p>
-            {canCreate() && (
+            {canCreateSendingProfiles && (
               <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
                 <Plus className="w-4 h-4 mr-2" />
                 Crear Primer Perfil
@@ -264,13 +264,13 @@ export function SendingProfiles() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {canEdit() && (
+                    {canEditSendingProfiles && (
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(profile)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </Button>
                     )}
-                    {canDelete() && (
+                    {canDeleteSendingProfiles && (
                       <Button 
                         variant="destructive" 
                         size="sm" 

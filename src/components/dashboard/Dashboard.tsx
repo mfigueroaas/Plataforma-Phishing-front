@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { apiCampaigns, Campaign, CampaignSummary } from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -26,6 +27,7 @@ interface DashboardProps {
 
 export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
   const { activeConfig } = useGoPhishConfig();
+  const { canCreateCampaigns } = usePermissions();
   
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [summaryMap, setSummaryMap] = useState<Record<number, CampaignSummary>>({});
@@ -109,10 +111,12 @@ export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
             Resumen de actividad y métricas de campañas de phishing educativo
           </p>
         </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={onCreateClick}>
-          <Plus className="w-4 h-4" />
-          Nueva Campaña
-        </Button>
+        {canCreateCampaigns && (
+          <Button className="gap-2 w-full sm:w-auto" onClick={onCreateClick}>
+            <Plus className="w-4 h-4" />
+            Nueva Campaña
+          </Button>
+        )}
       </div>
 
       {/* Config Alert */}

@@ -245,7 +245,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
         </div>
 
         {/* Admin Section */}
-        {(!isCollapsed || isMobile) && (
+        {user?.role === 'platform_admin' && (!isCollapsed || isMobile) && (
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-wider text-primary-foreground/70 px-3 mb-2">
               Administración

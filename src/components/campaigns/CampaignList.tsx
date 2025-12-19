@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { apiCampaigns, Campaign, CampaignResult, CampaignSummary } from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -52,8 +53,9 @@ interface CampaignListProps {
 }
 
 export function CampaignList({ onCreateClick }: CampaignListProps) {
-  const { user, canCreate, canDelete } = useAuth();
+  const { user } = useAuth();
   const { activeConfig } = useGoPhishConfig();
+  const { canCreateCampaigns, canDeleteCampaigns, canCompleteCampaigns } = usePermissions();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
@@ -495,10 +497,12 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
               <Download className="w-4 h-4 mr-2" />
               Exportar CSV
             </Button>
-            <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Marcar como completada
-            </Button>
+            {canCompleteCampaigns && (
+              <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Marcar como completada
+              </Button>
+            )}
           </div>
         </div>
 
@@ -847,10 +851,12 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             Gestiona y monitorea tus campañas de phishing educativo
           </p>
         </div>
-        <Button className="gap-2" disabled={!canCreate} onClick={onCreateClick}>
-          <Plus className="w-4 h-4" />
-          Nueva Campaña
-        </Button>
+        {canCreateCampaigns && (
+          <Button className="gap-2" onClick={onCreateClick}>
+            <Plus className="w-4 h-4" />
+            Nueva Campaña
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -1053,19 +1059,24 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                               <Download className="w-4 h-4 mr-2" />
                               Exportar Resultados
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleComplete(campaign)}>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Marcar como completada
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDelete(campaign.local_id)}
-                              disabled={!canDelete}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
+                            {canCompleteCampaigns && (
+                              <DropdownMenuItem onClick={() => handleComplete(campaign)}>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Marcar como completada
+                              </DropdownMenuItem>
+                            )}
+                            {canDeleteCampaigns && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDelete(campaign.local_id)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

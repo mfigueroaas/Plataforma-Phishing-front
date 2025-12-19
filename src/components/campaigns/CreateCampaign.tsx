@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { 
   apiCampaigns, 
   apiUserGroups, 
@@ -40,7 +41,7 @@ interface CreateCampaignProps {
 }
 
 export function CreateCampaign({ onBack }: CreateCampaignProps) {
-  const { canCreate } = useAuth();
+  const { canCreateCampaigns } = usePermissions();
   const { activeConfig } = useGoPhishConfig();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -91,7 +92,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
   };
 
   const handleCreateCampaign = async () => {
-    if (!activeConfig?.id || !canCreate) return;
+    if (!activeConfig?.id || !canCreateCampaigns) return;
     
     // Construir payload solo con campos requeridos y válidos
     const payload: any = {
@@ -612,7 +613,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
         {currentStep === steps.length - 1 ? (
           <Button 
             onClick={handleCreateCampaign}
-            disabled={loading || !canCreate || !campaignData.name || !campaignData.url || campaignData.selectedGroups.length === 0 || !campaignData.selectedTemplate || !campaignData.selectedLandingPage || !campaignData.selectedSendingProfile}
+            disabled={loading || !canCreateCampaigns || !campaignData.name || !campaignData.url || campaignData.selectedGroups.length === 0 || !campaignData.selectedTemplate || !campaignData.selectedLandingPage || !campaignData.selectedSendingProfile}
             className="gap-2"
           >
             {loading ? 'Creando...' : 'Crear campaña'}

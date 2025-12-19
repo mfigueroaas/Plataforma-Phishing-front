@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
 import { useAuth } from '../auth/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { 
   apiGophishTemplates, 
   EmailTemplate, 
@@ -29,7 +30,7 @@ import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronD
 
 export function TemplateEditor() {
   const { activeConfig } = useGoPhishConfig();
-  const { canCreate, canEdit, canDelete } = useAuth();
+  const { canCreateTemplates, canEditTemplates, canDeleteTemplates } = usePermissions();
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -445,15 +446,17 @@ export function TemplateEditor() {
           </Collapsible>
 
           {/* ACCIONES */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button onClick={editingTemplate ? handleUpdate : handleCreate} disabled={isSaving} size="lg">
-              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (editingTemplate ? <Edit className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />)}
-              {editingTemplate ? 'Guardar cambios' : 'Crear plantilla'}
-            </Button>
-            {editingTemplate && (
-              <Button variant="outline" onClick={resetForm} size="lg">Cancelar</Button>
-            )}
-          </div>
+          {(editingTemplate ? canEditTemplates : canCreateTemplates) && (
+            <div className="flex gap-3 pt-4 border-t">
+              <Button onClick={editingTemplate ? handleUpdate : handleCreate} disabled={isSaving} size="lg">
+                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (editingTemplate ? <Edit className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />)}
+                {editingTemplate ? 'Guardar cambios' : 'Crear plantilla'}
+              </Button>
+              {editingTemplate && (
+                <Button variant="outline" onClick={resetForm} size="lg">Cancelar</Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -509,13 +512,13 @@ export function TemplateEditor() {
                         <Eye className="w-4 h-4 mr-2" />
                         Vista Previa
                       </Button>
-                      {canEdit() && (
+                      {canEditTemplates && (
                         <Button variant="outline" size="sm" onClick={() => openEditForm(tpl)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Editar
                         </Button>
                       )}
-                      {canDelete() && (
+                      {canDeleteTemplates && (
                         <Button variant="destructive" size="sm" onClick={() => handleDelete(tpl.local_id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>

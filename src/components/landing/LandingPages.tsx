@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
 import { useAuth } from '../auth/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { apiLandingPages, LandingPage, LandingPageCreate } from '../../lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -22,7 +23,7 @@ import { Globe, Plus, Trash2, Edit, Loader2, AlertCircle, Eye, Download, Code, C
 
 export function LandingPages() {
   const { activeConfig } = useGoPhishConfig();
-  const { canCreate, canEdit, canDelete } = useAuth();
+  const { canCreateLandingPages, canEditLandingPages, canDeleteLandingPages } = usePermissions();
   
   const [pages, setPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,7 +243,7 @@ export function LandingPages() {
             Crea y gestiona páginas de phishing educativo
           </p>
         </div>
-        {canCreate() && (
+        {canCreateLandingPages && (
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Página
@@ -266,7 +267,7 @@ export function LandingPages() {
           <CardContent className="py-12 text-center">
             <Globe className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No hay páginas de destino configuradas</p>
-            {canCreate() && (
+            {canCreateLandingPages && (
               <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
                 <Plus className="w-4 h-4 mr-2" />
                 Crear Primera Página
@@ -319,13 +320,13 @@ export function LandingPages() {
                       <Eye className="w-4 h-4 mr-2" />
                       Vista Previa
                     </Button>
-                    {canEdit() && (
+                    {canEditLandingPages && (
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(page)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </Button>
                     )}
-                    {canDelete() && (
+                    {canDeleteLandingPages && (
                       <Button 
                         variant="destructive" 
                         size="sm" 

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { apiUserGroups, TargetUser, UserGroup, UserGroupCreate, UserGroupUpdate } from '../../lib/api/client';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -11,8 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { X } from 'lucide-react';
 
 export default function Groups() {
-  const { user, canCreate, canEdit, canDelete } = useAuth();
+  const { user } = useAuth();
   const { activeConfig } = useGoPhishConfig();
+  const { canCreateGroups, canEditGroups, canDeleteGroups } = usePermissions();
 
   const [groups, setGroups] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,9 +177,11 @@ export default function Groups() {
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Grupos de Usuarios Objetivo</h1>
-        <Button onClick={() => openDialog()} disabled={!canCreate}>
-          Crear Grupo
-        </Button>
+        {canCreateGroups && (
+          <Button onClick={() => openDialog()}>
+            Crear Grupo
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -220,7 +224,7 @@ export default function Groups() {
                           variant="outline"
                           size="sm"
                           onClick={() => openDialog(g)}
-                          disabled={!canEdit}
+                          disabled={!canEditGroups}
                         >
                           Editar
                         </Button>
@@ -228,7 +232,7 @@ export default function Groups() {
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(g.local_id)}
-                          disabled={!canDelete}
+                          disabled={!canDeleteGroups}
                         >
                           Eliminar
                         </Button>

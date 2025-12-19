@@ -53,6 +53,17 @@ export interface BackendUser {
   name: string;
   email: string;
   role: 'viewer' | 'operator' | 'platform_admin';
+  created_at: string;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  name: string;
+  role: 'viewer' | 'operator' | 'platform_admin';
+}
+
+export interface UpdateRoleRequest {
+  role: 'viewer' | 'operator' | 'platform_admin';
 }
 
 export const apiUsers = {
@@ -60,10 +71,22 @@ export const apiUsers = {
   
   // Admin endpoints
   listAll: (): Promise<BackendUser[]> => apiFetch('/admin/users'),
-  updateRole: (userId: number, role: string): Promise<void> =>
+  
+  create: (data: CreateUserRequest): Promise<BackendUser> =>
+    apiFetch('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  
+  delete: (userId: number): Promise<void> =>
+    apiFetch(`/admin/users/${userId}`, {
+      method: 'DELETE'
+    }),
+  
+  updateRole: (userId: number, data: UpdateRoleRequest): Promise<void> =>
     apiFetch(`/admin/users/${userId}/role`, {
       method: 'PUT',
-      body: JSON.stringify({ role })
+      body: JSON.stringify(data)
     })
 };
 

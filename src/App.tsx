@@ -17,6 +17,7 @@ import Groups from './components/groups/Groups';
 import { PerformanceDebug } from './components/ui/performance-debug';
 import { SecurityDashboard } from './components/security/SecurityDashboard';
 import { ErrorBoundary } from './components/ui/error-boundary';
+import { UserManagement } from './components/admin/UserManagement';
 
 
 export default function App() {
@@ -135,23 +136,7 @@ export default function App() {
           </ErrorBoundary>
         );
       case 'management':
-        return (
-          <div className="p-4 sm:p-6">
-            <h1 className="text-xl sm:text-2xl">Gestión de Usuarios</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Panel administrativo en desarrollo...
-            </p>
-            <div className="mt-8 p-4 bg-muted rounded-lg">
-              <h3 className="font-medium mb-2">🔧 Funcionalidades Planificadas</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Gestión de roles: viewer, operator, platform_admin</li>
-                <li>• Flujo de aprobaciones pendientes</li>
-                <li>• Auditoria de acciones</li>
-                <li>• Configuración de permisos granulares</li>
-              </ul>
-            </div>
-          </div>
-        );
+        return <UserManagement />;
       case 'webhooks':
         return (
           <div className="p-4 sm:p-6">
