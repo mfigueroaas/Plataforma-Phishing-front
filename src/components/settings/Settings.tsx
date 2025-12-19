@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Tabs, TabsContent } from '../ui/tabs';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Server, Mail, Shield, Key, Plus, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
@@ -81,22 +81,6 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="gophish" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="gophish">
-            <Server className="w-4 h-4 mr-2" />
-            GoPhish
-          </TabsTrigger>
-          <TabsTrigger value="smtp">
-            <Mail className="w-4 h-4 mr-2" />
-            SMTP
-          </TabsTrigger>
-          {isAdmin() && (
-            <TabsTrigger value="security">
-              <Shield className="w-4 h-4 mr-2" />
-              Seguridad
-            </TabsTrigger>
-          )}
-        </TabsList>
 
         <TabsContent value="gophish" className="space-y-4">
           {configError && (
