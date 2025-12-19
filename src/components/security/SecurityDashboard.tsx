@@ -40,6 +40,48 @@ export function SecurityDashboard() {
     return `https://${v}`;
   };
 
+  // Validate URL format
+  const validateUrl = (val: string): { valid: boolean; error?: string } => {
+    const trimmed = val.trim();
+    if (!trimmed) {
+      return { valid: false, error: 'Por favor ingresa una URL' };
+    }
+
+    // Normalize first
+    const normalized = normalizeUrl(trimmed);
+
+    // Check if it has a valid domain structure
+    try {
+      const urlObj = new URL(normalized);
+      
+      // Check if hostname has at least one dot and a valid TLD
+      const hostname = urlObj.hostname;
+      if (!hostname || hostname === 'localhost') {
+        return { valid: false, error: 'La URL debe tener un dominio válido (ej: ejemplo.com)' };
+      }
+
+      // Check for valid TLD (at least 2 chars after last dot)
+      const parts = hostname.split('.');
+      if (parts.length < 2) {
+        return { valid: false, error: 'La URL debe incluir un dominio completo (ej: ejemplo.com, sitio.org)' };
+      }
+
+      const tld = parts[parts.length - 1];
+      if (!tld || tld.length < 2) {
+        return { valid: false, error: 'La URL debe tener una extensión válida (.com, .org, .net, etc.)' };
+      }
+
+      // Check that domain parts are not empty
+      if (parts.some(part => !part)) {
+        return { valid: false, error: 'El formato del dominio no es válido' };
+      }
+
+      return { valid: true };
+    } catch (err) {
+      return { valid: false, error: 'El formato de la URL no es válido. Ejemplo: https://ejemplo.com' };
+    }
+  };
+
   // Lazy init from localStorage to persist across navigation
   const [url, setUrl] = useState<string>(() => {
     try {
@@ -102,8 +144,10 @@ export function SecurityDashboard() {
   }, [urlscanData]);
 
   const handleAnalyze = async () => {
-    if (!url.trim()) {
-      setError('Por favor ingresa una URL válida');
+    // Validate URL format before processing
+    const validation = validateUrl(url);
+    if (!validation.valid) {
+      setError(validation.error || 'URL inválida');
       return;
     }
 
@@ -523,10 +567,8 @@ export function SecurityDashboard() {
           {/* Detailed Analysis from urlscan.io */}
           {urlscanData?.result && (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">Resumen</TabsTrigger>
-                <TabsTrigger value="screenshot">Captura</TabsTrigger>
-                <TabsTrigger value="threats">Amenazas</TabsTrigger>
                 <TabsTrigger value="technical">Técnico</TabsTrigger>
                 <TabsTrigger value="network">Red</TabsTrigger>
               </TabsList>
@@ -581,172 +623,9 @@ export function SecurityDashboard() {
                 </Card>
               </TabsContent>
 
-              {/* Screenshot Tab */}
-              <TabsContent value="screenshot">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5" />
-                      Captura de Pantalla
-                    </CardTitle>
-                    <CardDescription>
-                      Visualización del sitio al momento del escaneo
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {urlscanData.result?.task?.screenshotURL ? (
-                      <>
-                        <div className="rounded-lg border overflow-hidden bg-muted">
-                          <img 
-                            src={urlscanData.result.task.screenshotURL} 
-                            alt="Screenshot del sitio"
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600"%3E%3Crect fill="%23f0f0f0" width="800" height="600"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%23999"%3EImagen no disponible%3C/text%3E%3C/svg%3E';
-                            }}
-                          />
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(urlscanData.result?.task?.screenshotURL || '', '_blank')}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Ver en Tamaño Completo
-                          </Button>
-                          {urlscanData.result?.task?.domURL && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(urlscanData.result?.task?.domURL || '', '_blank')}
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Ver DOM
-                            </Button>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="p-8 text-center text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Captura de pantalla no disponible</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              
 
-              {/* Threats Tab */}
-              <TabsContent value="threats" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Veredictos de Seguridad</CardTitle>
-                    <CardDescription>Análisis de amenazas detectadas</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Overall Verdict */}
-                    <div>
-                      <h3 className="font-semibold mb-3 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" />
-                        Veredicto General
-                      </h3>
-                      <div className="p-4 rounded-lg border bg-muted/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">Score de Amenaza</span>
-                          <Badge 
-                            variant={urlscanData.result?.verdicts?.overall?.malicious ? 'destructive' : 'success'}
-                          >
-                            {urlscanData.result?.verdicts?.overall?.score ?? 0}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            {urlscanData.result?.verdicts?.overall?.malicious ? (
-                              <AlertTriangle className="w-4 h-4 text-destructive" />
-                            ) : (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            )}
-                            <span className="text-sm">
-                              {urlscanData.result?.verdicts?.overall?.malicious ? 'Malicioso' : 'Seguro'}
-                            </span>
-                          </div>
-                          {urlscanData.result?.verdicts?.overall?.categories && 
-                           urlscanData.result.verdicts.overall.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {urlscanData.result.verdicts.overall.categories.map((cat) => (
-                                <Badge key={cat} variant="outline">{cat}</Badge>
-                              ))}
-                            </div>
-                          )}
-                          {urlscanData.result?.verdicts?.overall?.brands && 
-                           urlscanData.result.verdicts.overall.brands.length > 0 && (
-                            <div className="mt-3">
-                              <p className="text-sm text-muted-foreground mb-2">Marcas detectadas:</p>
-                              <div className="space-y-1">
-                                {urlscanData.result.verdicts.overall.brands.map((brand, idx) => (
-                                  <div key={idx} className="text-sm flex items-center gap-2">
-                                    <Badge variant="secondary">{brand.name || 'Unknown'}</Badge>
-                                    {brand.country && brand.country.length > 0 && (
-                                      <span className="text-muted-foreground">
-                                        ({brand.country.join(', ')})
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* urlscan.io Verdict */}
-                    <div>
-                      <h3 className="font-semibold mb-3">urlscan.io Analysis</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-lg border">
-                          <p className="text-sm text-muted-foreground mb-1">Score</p>
-                          <p className="text-2xl font-bold">{urlscanData.result?.verdicts?.urlscan?.score ?? 0}</p>
-                        </div>
-                        <div className="p-4 rounded-lg border">
-                          <p className="text-sm text-muted-foreground mb-1">Estado</p>
-                          <Badge variant={urlscanData.result?.verdicts?.urlscan?.malicious ? 'destructive' : 'success'}>
-                            {urlscanData.result?.verdicts?.urlscan?.malicious ? 'Malicioso' : 'Limpio'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Community Verdict */}
-                    <div>
-                      <h3 className="font-semibold mb-3">Veredicto de la Comunidad</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="p-4 rounded-lg border text-center">
-                          <p className="text-sm text-muted-foreground mb-1">Votos Totales</p>
-                          <p className="text-2xl font-bold">{urlscanData.result?.verdicts?.community?.votesTotal ?? 0}</p>
-                        </div>
-                        <div className="p-4 rounded-lg border text-center">
-                          <p className="text-sm text-muted-foreground mb-1">Maliciosos</p>
-                          <p className="text-2xl font-bold text-destructive">
-                            {urlscanData.result?.verdicts?.community?.votesMalicious ?? 0}
-                          </p>
-                        </div>
-                        <div className="p-4 rounded-lg border text-center">
-                          <p className="text-sm text-muted-foreground mb-1">Benignos</p>
-                          <p className="text-2xl font-bold text-green-600">
-                            {urlscanData.result?.verdicts?.community?.votesBenign ?? 0}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              
 
               {/* Technical Tab */}
               <TabsContent value="technical" className="space-y-4">
