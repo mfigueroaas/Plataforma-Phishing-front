@@ -55,6 +55,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'campaigns', icon: Target, label: 'Campañas' },
     { id: 'detection', icon: Shield, label: 'Detección' },
+    { id: 'security', icon: Shield, label: 'Security Dashboard', badge: 'New' },
     { id: 'users', icon: Users, label: 'Usuarios y Grupos' },
     { id: 'templates', icon: Mail, label: 'Plantillas de Email' },
     { id: 'landing', icon: Globe, label: 'Páginas de Destino' },
@@ -232,7 +233,16 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
               onClick={() => onPageChange(item.id)}
             >
               <item.icon className="w-4 h-4 flex-shrink-0" />
-              {(!isCollapsed || isMobile) && <span className="truncate">{item.label}</span>}
+              {(!isCollapsed || isMobile) && (
+                <>
+                  <span className="truncate flex-1">{item.label}</span>
+                  {item.badge && (
+                    <Badge variant="outline" className="text-xs border-primary-foreground/30 text-primary-foreground/70">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
+              )}
             </Button>
           ))}
         </div>
