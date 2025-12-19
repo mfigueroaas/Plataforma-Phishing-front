@@ -60,6 +60,10 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [summaryMap, setSummaryMap] = useState<Record<number, CampaignSummary>>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [summary, setSummary] = useState<CampaignSummary | null>(null);
@@ -221,10 +225,35 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     URL.revokeObjectURL(url);
   };
 
-  const filteredCampaigns = campaigns.filter(campaign =>
-    campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campaign.template_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCampaigns = campaigns.filter(campaign => {
+    // Filtro de búsqueda
+    const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.template_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    // Filtro de estado
+    if (statusFilter.length > 0) {
+      const statusLower = campaign.status?.toLowerCase() || '';
+      const matchesStatus = statusFilter.some(filter => {
+        if (filter === 'activa') return statusLower.includes('progress') || statusLower.includes('sending');
+        if (filter === 'completada') return statusLower.includes('complet');
+        if (filter === 'programada') return statusLower.includes('queued') || statusLower.includes('scheduled');
+        if (filter === 'error') return statusLower.includes('error');
+        return false;
+      });
+      if (!matchesStatus) return false;
+    }
+
+    // Filtro de fecha
+    if (dateFrom || dateTo) {
+      const campaignDate = new Date((summaryMap[campaign.local_id]?.created_date) || campaign.created_date);
+      if (dateFrom && campaignDate < new Date(dateFrom)) return false;
+      if (dateTo && campaignDate > new Date(dateTo)) return false;
+    }
+
+    return true;
+  });
 
   const exitDetails = () => {
     setDetailMode(false);
@@ -844,11 +873,84 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" className="gap-2">
+            <Button 
+              variant={showFilters ? 'default' : 'outline'} 
+              className="gap-2"
+              onClick={() => setShowFilters(!showFilters)}
+            >
               <Filter className="w-4 h-4" />
               Filtros
+              {(statusFilter.length > 0 || dateFrom || dateTo) && (
+                <Badge variant="secondary" className="ml-1">
+                  {statusFilter.length + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)}
+                </Badge>
+              )}
             </Button>
           </div>
+
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t space-y-4">
+              {/* Filtro por Estado */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Estado</label>
+                <div className="flex flex-wrap gap-2">
+                  {['activa', 'completada', 'programada', 'error'].map(status => (
+                    <Button
+                      key={status}
+                      variant={statusFilter.includes(status) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter(prev =>
+                          prev.includes(status)
+                            ? prev.filter(s => s !== status)
+                            : [...prev, status]
+                        );
+                      }}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtro por Fecha */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Fecha desde</label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Fecha hasta</label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Botón para limpiar filtros */}
+              {(statusFilter.length > 0 || dateFrom || dateTo) && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setStatusFilter([]);
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
