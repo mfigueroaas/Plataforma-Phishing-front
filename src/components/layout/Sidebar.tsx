@@ -14,6 +14,7 @@ import {
   Shield,
   LogOut,
   User,
+  Brain,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -55,6 +56,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isMobile = 
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', badge: undefined },
     { id: 'campaigns', icon: Target, label: 'Campañas', badge: undefined },
     { id: 'security', icon: Shield, label: 'Detección de URL', badge: undefined },
+    { id: 'ai-detector', icon: Brain, label: 'Detector IA Phishing', badge: undefined },
     { id: 'users', icon: Users, label: 'Usuarios y Grupos', badge: undefined },
     { id: 'templates', icon: Mail, label: 'Plantillas de Email', badge: undefined },
     { id: 'landing', icon: Globe, label: 'Páginas de Destino', badge: undefined },

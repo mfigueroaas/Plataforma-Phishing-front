@@ -18,6 +18,7 @@ import { PerformanceDebug } from './components/ui/performance-debug';
 import { SecurityDashboard } from './components/security/SecurityDashboard';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { UserManagement } from './components/admin/UserManagement';
+import { AIPhishingDetector } from './components/security/AIPhishingDetector';
 
 
 export default function App() {
@@ -133,6 +134,12 @@ export default function App() {
         return (
           <ErrorBoundary>
             <SecurityDashboard />
+          </ErrorBoundary>
+        );
+      case 'ai-detector':
+        return (
+          <ErrorBoundary>
+            <AIPhishingDetector />
           </ErrorBoundary>
         );
       case 'management':

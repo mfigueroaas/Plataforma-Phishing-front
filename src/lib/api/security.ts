@@ -80,6 +80,45 @@ export interface PollUrlScanRequest {
   max_attempts?: number;
 }
 
+// AI Phishing Detection interfaces
+export interface AIAnalysis {
+  is_phishing: boolean;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  confidence_score: number;
+  analysis: {
+    auth_check: string;
+    sender_consistency: string;
+    social_engineering: string;
+  };
+  flags: string[];
+  verdict_reason: string;
+  raw_ai_response: string;
+}
+
+export interface EmailLink {
+  visible_text: string;
+  actual_url: string;
+  is_suspicious: boolean;
+}
+
+export interface EmailReport {
+  headers: Record<string, string>;
+  text_content: string;
+  links: EmailLink[];
+  attachments: any[];
+  raw_report: string;
+}
+
+export interface PhishingAnalysisResponse {
+  ai_analysis: AIAnalysis;
+  email_report: EmailReport;
+  summary: {
+    confidence_score: number;
+    is_phishing: boolean;
+    risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  };
+}
+
 /**
  * Analyze a URL for security threats using Google Safe Browsing and urlscan.io
  */
@@ -145,5 +184,23 @@ export async function bulkValidateUrls(urls: string[]): Promise<any> {
   return apiFetch('/security/bulk-validate-urls', {
     method: 'POST',
     body: JSON.stringify({ urls })
+  });
+}
+
+/**
+ * Analyze email content for phishing using AI
+ * @param rawEmailContent - Raw email content (plain text)
+ * @param language - Analysis language ('es' or 'en')
+ */
+export async function analyzePhishingWithAI(
+  rawEmailContent: string, 
+  language: 'es' | 'en' = 'es'
+): Promise<PhishingAnalysisResponse> {
+  return apiFetch(`/security/analyze-phishing/plain?language=${language}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain'
+    },
+    body: rawEmailContent
   });
 }
