@@ -7,6 +7,7 @@ import { CreateCampaign } from './components/campaigns/CreateCampaign';
 import { TemplateEditor } from './components/templates/TemplateEditor';
 import { Settings } from './components/settings/Settings';
 import { LandingPages } from './components/landing/LandingPages';
+import { IntroLandingPage } from './components/landing-intro/IntroLandingPage';
 import { Login } from './components/auth/Login';
 import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
@@ -65,8 +66,11 @@ export default function App() {
   }
 
   if (!user) {
-    // ⬇️ Login ahora usa AuthContext internamente
-    return <Login onLogin={() => {}} />;
+    // ⬇️ Mostrar IntroLandingPage en lugar de Login
+    return <IntroLandingPage onLogin={(userData) => {
+      // El login se maneja internamente por LoginDialog y AuthContext
+      console.log('Usuario logueado:', userData);
+    }} />;
   }
 
   const renderMainContent = () => {
