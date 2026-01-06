@@ -8,6 +8,7 @@ import { TemplateEditor } from './components/templates/TemplateEditor';
 import { Settings } from './components/settings/Settings';
 import { LandingPages } from './components/landing/LandingPages';
 import { IntroLandingPage } from './components/landing-intro/IntroLandingPage';
+import { PhishingAwarenessLanding } from './components/landing/PhishingAwarenessLanding';
 import { Login } from './components/auth/Login';
 import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
@@ -47,9 +48,15 @@ export default function App() {
     }
   };
 
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
   const urlParams = new URLSearchParams(window.location.search);
+  const isAwarenessLanding = pathname === '/rutadelalanding';
   const isLandingPage = urlParams.get('landing') === 'true';
   
+  if (isAwarenessLanding) {
+    return <PhishingAwarenessLanding />;
+  }
+
   if (isLandingPage) {
     return <LandingPages />;
   }
