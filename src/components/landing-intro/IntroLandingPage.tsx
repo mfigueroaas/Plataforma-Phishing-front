@@ -133,32 +133,33 @@ export function IntroLandingPage({ onLogin }: IntroLandingPageProps) {
             </div>
           </div>
         )}
+        
       </nav>
 
       {/* Secciones principales - añadir padding top para compensar el navbar fixed */}
-      <div className="pt-16 md:pt-20">
+      <div style={{paddingTop: '67px'}}>
         <HeroSection onGetStarted={openLoginDialog} />
       
-      <div id="about">
-        <AboutProjectSection />
-      </div>
-      
-      <div id="features">
-        <FeaturesSection />
-      </div>
-      
-      <div id="how-it-works">
-        <HowItWorksSection />
-      </div>
-
-      {/* Footer simple */}
-      <footer className="bg-[#0a1929] border-t border-white/10 py-8">
-        <div className="container mx-auto px-4 md:px-6 text-center">
-          <p className="text-gray-400 text-sm">
-            © 2026 Universidad Tecnológica Metropolitana
-          </p>
+        <div id="about">
+          <AboutProjectSection />
         </div>
-      </footer>
+        
+        <div id="features">
+          <FeaturesSection />
+        </div>
+        
+        <div id="how-it-works">
+          <HowItWorksSection />
+        </div>
+
+        {/* Footer simple */}
+        <footer className="bg-[#0a1929] border-t border-white/10 py-8">
+          <div className="container mx-auto px-4 md:px-6 text-center">
+            <p className="text-gray-400 text-sm">
+              © 2026 Universidad Tecnológica Metropolitana
+            </p>
+          </div>
+        </footer>
       </div>
 
       {/* Modal de Login */}

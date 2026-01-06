@@ -12,7 +12,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
   return (
-    <section className="relative overflow-hidden bg-[#0a1929] text-white py-20 md:py-32">
+    <section className="relative overflow-hidden bg-[#0a1929] text-white py-20 md:py-32 mb-16">
       {/* Background gradient effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#003366]/20 via-transparent to-[#00A859]/10"></div>
       
@@ -49,6 +49,8 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
           </div>
         </div>
       </div>
+         <div style={{paddingTop: '20px'}}></div>
     </section>
+    
   );
 }

@@ -45,7 +45,7 @@ export function TechStackSection() {
   ];
 
   return (
-    <section className="py-20 bg-[#0a1929]">
+    <section className="py-32 bg-[#0a1929]">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           {/* Encabezado */}
