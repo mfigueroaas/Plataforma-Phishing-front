@@ -85,14 +85,68 @@ export interface AIAnalysis {
   is_phishing: boolean;
   risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   confidence_score: number;
-  analysis: {
-    auth_check: string;
-    sender_consistency: string;
-    social_engineering: string;
+  risk_score: number;
+  critical_findings: string[];
+  analysis_summary: string;
+  recommendation: string;
+  detailed_analysis: {
+    overall_score: string;
+    authentication: {
+      points: number;
+      explanation: string;
+      found_issues?: string[];
+    };
+    sender_analysis: {
+      points: number;
+      explanation: string;
+      found_issues?: string[];
+    };
+    content_analysis: {
+      points: number;
+      explanation: string;
+      found_issues?: string[];
+    };
+    context_analysis: {
+      points: number;
+      explanation: string;
+      found_issues?: string[];
+    };
+    links_analysis: {
+      points: number;
+      explanation: string;
+      found_issues?: string[];
+    };
+    critical_indicators: {
+      phishing_tools: {
+        found: boolean;
+        details?: string;
+      };
+      deceptive_domain: {
+        found: boolean;
+        details?: string;
+      };
+      typosquatting: {
+        found: boolean;
+        details?: string;
+      };
+      credential_request: {
+        found: boolean;
+        details?: string;
+      };
+    };
+    conclusion: string;
+    notes: string[];
   };
-  flags: string[];
-  verdict_reason: string;
   raw_ai_response: string;
+  processing_time: number;
+  model_used: string;
+  scoring_breakdown: {
+    authentication_points: number;
+    content_points: number;
+    context_points: number;
+    links_points: number;
+    sender_points: number;
+  };
 }
 
 export interface EmailLink {
