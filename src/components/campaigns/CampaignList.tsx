@@ -26,7 +26,8 @@ import {
     AlertTriangle,
     Send,
     Flag,
-    Clock
+    Clock,
+    RefreshCw
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -284,6 +285,26 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     }
   };
 
+  const refreshCampaignDetails = async () => {
+    if (!activeConfig?.id || !selectedCampaign) return;
+    
+    setDetailsError(null);
+    setDetailsLoading(true);
+    try {
+      const [summaryResp, resultsResp] = await Promise.all([
+        apiCampaigns.summary(activeConfig.id, selectedCampaign.local_id),
+        apiCampaigns.results(activeConfig.id, selectedCampaign.local_id)
+      ]);
+      setSummary(summaryResp);
+      setResults(resultsResp.results || []);
+      setTimeline(resultsResp.timeline || []);
+    } catch (e: any) {
+      setDetailsError(e?.message || 'Error al recargar detalles');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
    const toggleRowExpansion = (index: number) => {
      setExpandedRows(prev => {
        const next = new Set(prev);
@@ -493,6 +514,10 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
           </div>
 
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={refreshCampaignDetails} disabled={detailsLoading} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Recargar
+            </Button>
             <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)}>
               <Download className="w-4 h-4 mr-2" />
               Exportar CSV
