@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Slider from "react-slick";
 import { motion } from "motion/react";
 import {
@@ -20,11 +20,19 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 export function PhishingAwarenessLanding() {
-  const [showWarning, setShowWarning] = useState(true);
+  const [showBars, setShowBars] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowWarning(false), 3000);
-    return () => clearTimeout(timer);
+    const handleScroll = () => {
+      // Ocultar barras cuando el scroll supera el 50% de la altura de la ventana
+      const scrollThreshold = window.innerHeight * 0.5;
+      const shouldShow = window.scrollY < scrollThreshold;
+      setShowBars(shouldShow);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Llamar inmediatamente para establecer estado inicial
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const phishingIndicators = [
@@ -131,99 +139,86 @@ export function PhishingAwarenessLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      {showWarning && (
-        <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="fixed top-0 left-0 right-0 z-50 bg-[#1e3a5f] text-white py-4 px-6 shadow-lg"
-        >
-          <div className="container mx-auto flex items-center justify-center gap-3">
-            <AlertTriangle className="w-6 h-6 animate-pulse" />
-            <p className="font-semibold">¡ALERTA DE SEGURIDAD!</p>
-          </div>
-        </motion.div>
-      )}
+    <div className="min-h-screen bg-gray-50">
+      {/* Barra superior fija */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-40 text-black text-center py-2 text-xs sm:text-sm md:text-base font-extrabold tracking-[0.35em] uppercase shadow-md transition-all duration-300 ${showBars ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full"}`}
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, #000000 0, #000000 10px, #ffeb3b 10px, #ffeb3b 20px)",
+        }}
+      />
 
-      <div className="container mx-auto px-4 py-12 pt-24">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-center mb-12 min-h-[80vh] flex flex-col justify-center relative"
-        >
+      {/* Barra inferior fija */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-40 text-black text-center py-2 text-[10px] sm:text-xs md:text-sm font-extrabold tracking-[0.25em] uppercase shadow-[0_-2px_4px_rgba(0,0,0,0.25)] transition-all duration-300 ${showBars ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"}`}
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, #000000 0, #000000 10px, #ffeb3b 10px, #ffeb3b 20px)",
+        }}
+      />
+
+      <div className="container mx-auto px-4 py-12">
+        <div className="text-center mb-12 md:mb-16 min-h-screen flex flex-col justify-center items-center">
           <motion.div
-            animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 rounded-3xl -z-10 blur-3xl"
-          />
-
-          <div className="inline-block mb-6">
-            <motion.div animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ duration: 0.5, repeat: 3, delay: 0.5 }}>
-              <Shield className="w-24 h-24 mx-auto text-[#1e3a5f]" />
-            </motion.div>
-          </div>
-
-          <h1 className="text-5xl font-bold text-[#1e3a5f] mb-4">⚠️ ¡Has Caído en un Phishing Educativo! ⚠️</h1>
-
+            initial={{ scale: 1.2, opacity: 0, y: 0 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 140, damping: 10 }}
+            className="mb-12 flex flex-col items-center"
+          >
+            <Shield
+              className="mx-auto text-[#2c5f7c] mb-4 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40"
+            />
+            <motion.h1
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#2c5f7c] mb-6 md:mb-8 px-4 leading-tight"
+              animate={{ scale: [1, 1.05, 1], y: [0, -6, 0] }}
+              transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+            >
+              ⚠️ ¡Has Caído en un Phishing Educativo! ⚠️
+            </motion.h1>
+          </motion.div>
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="text-xl text-gray-700 max-w-3xl mx-auto mb-6"
+            initial={{ scale: 0.7, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, type: "spring", stiffness: 120, damping: 12 }}
+            className="mt-3 md:mt-4 text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 max-w-5xl mx-auto mb-8 md:mb-10 px-4 leading-relaxed"
           >
             No te preocupes, esto es una simulación con fines educativos. Sin embargo, si hubiera sido un ataque real, tus datos
             podrían haber sido comprometidos.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
-            className="bg-green-50 border-l-4 border-[#00d97e] p-4 max-w-2xl mx-auto rounded"
+            initial={{ scale: 0.8, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 120, damping: 14 }}
+            className="bg-green-50 border-l-4 border-green-500 p-5 sm:p-6 md:p-8 max-w-4xl mx-auto rounded-r-lg shadow-sm"
           >
-            <p className="text-gray-800">
+            <p className="text-gray-700 text-center text-lg sm:text-xl md:text-2xl leading-relaxed">
               <strong>Importante:</strong> Esta es una campaña de concientización sobre seguridad. Aprende de esta experiencia para
               protegerte de amenazas reales.
             </p>
           </motion.div>
-        </motion.div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.4 }}
-          className="grid md:grid-cols-3 gap-6 mb-16"
-        >
-          <Card className="p-6 text-center bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="text-4xl font-bold text-red-600 mb-2">91%</div>
-            <p className="text-gray-600">de los ciberataques comienzan con un correo de phishing</p>
-          </Card>
-          <Card className="p-6 text-center bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="text-4xl font-bold text-orange-600 mb-2">$4.9M</div>
-            <p className="text-gray-600">es el costo promedio de una brecha de datos</p>
-          </Card>
-          <Card className="p-6 text-center bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="text-4xl font-bold text-yellow-600 mb-2">1 de 4</div>
-            <p className="text-gray-600">empleados caen en ataques de phishing simulados</p>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.4 }}
+          transition={{ delay: 1.6 }}
           className="max-w-5xl mx-auto mb-16"
         >
           <h2 className="text-3xl font-bold text-[#1e3a5f] mb-8 text-center">¿Por qué caíste?</h2>
           <div className="bg-white rounded-lg shadow-xl p-6">
             <Slider {...sliderSettings}>
               {phishingReasons.map((reason, index) => (
-                <div key={reason.title} className="px-4">
+                <div key={index} className="px-4">
                   <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="md:w-1/2">
-                      <img src={reason.image} alt={reason.title} className="w-full h-64 object-cover rounded-lg shadow-lg" />
+                    <div className="md:w-1/2 flex justify-center">
+                      <img
+                        src={reason.image}
+                        alt={reason.title}
+                        style={{ width: 256, height: 256, minWidth: 256, minHeight: 256, maxWidth: 256, maxHeight: 256 }}
+                        className="object-cover rounded-lg shadow-lg"
+                      />
                     </div>
                     <div className="md:w-1/2">
                       <div className="flex items-center gap-3 mb-4">
@@ -253,12 +248,12 @@ export function PhishingAwarenessLanding() {
 
           <TabsContent value="indicators">
             <div className="grid md:grid-cols-2 gap-6">
-              {phishingIndicators.map((indicator) => (
+              {phishingIndicators.map((indicator, index) => (
                 <motion.div
-                  key={indicator.title}
+                  key={index}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ delay: index * 0.1 }}
                 >
                   <Card className="p-6 h-full hover:shadow-lg transition-shadow bg-white">
                     <div className="flex items-start gap-4">
@@ -283,12 +278,12 @@ export function PhishingAwarenessLanding() {
             <Card className="p-6 bg-white">
               <h3 className="text-2xl font-bold mb-6 text-center">¿Puedes identificar cuál es real y cuál es phishing?</h3>
               <div className="space-y-4">
-                {realVsFake.map((item) => (
+                {realVsFake.map((item, index) => (
                   <motion.div
-                    key={item.domain}
+                    key={index}
                     initial={{ opacity: 0, x: item.type === "real" ? -20 : 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ delay: index * 0.15 }}
                     className={`p-4 rounded-lg border-2 ${
                       item.type === "real"
                         ? "bg-green-50 border-[#00d97e]"
