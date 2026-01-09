@@ -278,45 +278,44 @@ export function AIPhishingDetector() {
                       <Brain className="w-3 h-3" />
                       Confianza: {result.summary.confidence_score}%
                     </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      📊 Risk Score: {result.ai_analysis.risk_score}
+                    </Badge>
                   </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium mb-1">Veredicto de la IA:</p>
+                <p className="text-sm font-medium mb-1">Resumen del Análisis:</p>
                   <p className="text-sm text-muted-foreground">
-                    {truncateText(result.ai_analysis.verdict_reason || 'No disponible', 500)}
+                    {truncateText(result.ai_analysis.analysis_summary || 'No disponible', 500)}
                   </p>
               </div>
 
-                {result.ai_analysis.flags && result.ai_analysis.flags.length > 0 && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-1">Recomendación:</p>
+                <Badge variant={result.ai_analysis.recommendation === 'BLOCK' ? 'destructive' : result.ai_analysis.recommendation === 'CAUTION' ? 'secondary' : 'default'}>
+                  {result.ai_analysis.recommendation}
+                </Badge>
+              </div>
+
+                {result.ai_analysis.critical_findings && result.ai_analysis.critical_findings.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-2">🚩 Indicadores Detectados:</p>
+                  <p className="text-sm font-medium mb-2">🚩 Hallazgos Críticos:</p>
                   <div className="flex flex-wrap gap-2">
-                    {result.ai_analysis.flags.map((flag, idx) => (
+                    {result.ai_analysis.critical_findings.map((finding, idx) => (
                         <Badge 
                           key={idx} 
-                          variant={flag.includes('ERROR') ? 'outline' : 'destructive'} 
+                          variant="destructive" 
                           className="text-xs"
                         >
-                        {flag}
+                        {finding}
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
-
-                {result.ai_analysis.flags?.some(f => f.includes('ERROR')) && (
-                  <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error en el Análisis</AlertTitle>
-                    <AlertDescription>
-                      La IA tuvo problemas al parsear la respuesta. Los resultados pueden estar incompletos.
-                      Revisa la "Respuesta Raw de la IA" para más detalles.
-                    </AlertDescription>
-                  </Alert>
-                )}
             </CardContent>
           </Card>
 
@@ -343,26 +342,176 @@ export function AIPhishingDetector() {
                         <p className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <span className="text-lg">🔐</span> Autenticación
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getSafeAnalysisValue(result.ai_analysis.analysis?.auth_check)}
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.authentication?.explanation)}
                         </p>
+                        <Badge variant={result.ai_analysis.detailed_analysis?.authentication?.points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.detailed_analysis?.authentication?.points || 0} puntos
+                        </Badge>
                       </div>
                       <div className="p-4 rounded-lg border bg-card shadow-sm">
                         <p className="text-sm font-semibold mb-1 flex items-center gap-2">
-                          <span className="text-lg">📧</span> Consistencia del Remitente
+                          <span className="text-lg">📧</span> Análisis del Remitente
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getSafeAnalysisValue(result.ai_analysis.analysis?.sender_consistency)}
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.sender_analysis?.explanation)}
                         </p>
+                        <Badge variant={result.ai_analysis.detailed_analysis?.sender_analysis?.points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.detailed_analysis?.sender_analysis?.points || 0} puntos
+                        </Badge>
+                      </div>
+                      <div className="p-4 rounded-lg border bg-card shadow-sm">
+                        <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <span className="text-lg">📝</span> Análisis del Contenido
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.content_analysis?.explanation)}
+                        </p>
+                        <Badge variant={result.ai_analysis.detailed_analysis?.content_analysis?.points > 10 ? 'destructive' : 'secondary'}>
+                          {result.ai_analysis.detailed_analysis?.content_analysis?.points || 0} puntos
+                        </Badge>
+                        {result.ai_analysis.detailed_analysis?.content_analysis?.found_issues && result.ai_analysis.detailed_analysis.content_analysis.found_issues.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {result.ai_analysis.detailed_analysis.content_analysis.found_issues.map((issue, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {issue}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4 rounded-lg border bg-card shadow-sm">
+                        <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <span className="text-lg">🔗</span> Análisis de Enlaces
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.links_analysis?.explanation)}
+                        </p>
+                        <Badge variant={result.ai_analysis.detailed_analysis?.links_analysis?.points > 10 ? 'destructive' : 'secondary'}>
+                          {result.ai_analysis.detailed_analysis?.links_analysis?.points || 0} puntos
+                        </Badge>
+                        {result.ai_analysis.detailed_analysis?.links_analysis?.found_issues && result.ai_analysis.detailed_analysis.links_analysis.found_issues.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {result.ai_analysis.detailed_analysis.links_analysis.found_issues.map((issue, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {issue}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="p-4 rounded-lg border bg-card shadow-sm md:col-span-2">
                         <p className="text-sm font-semibold mb-1 flex items-center gap-2">
-                          <span className="text-lg">🎭</span> Ingeniería Social
+                          <span className="text-lg">🎯</span> Análisis de Contexto
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getSafeAnalysisValue(result.ai_analysis.analysis?.social_engineering)}
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.context_analysis?.explanation)}
                         </p>
+                        <Badge variant={result.ai_analysis.detailed_analysis?.context_analysis?.points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.detailed_analysis?.context_analysis?.points || 0} puntos
+                        </Badge>
                       </div>
+                      <div className="p-4 rounded-lg border bg-card shadow-sm md:col-span-2 bg-orange-50 border-orange-200">
+                        <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <span className="text-lg">⚠️</span> Indicadores Críticos
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div className="text-xs">
+                            <span className="font-medium">Herramientas de Phishing:</span>
+                            <Badge variant={result.ai_analysis.detailed_analysis?.critical_indicators?.phishing_tools?.found ? 'destructive' : 'secondary'} className="ml-2">
+                              {result.ai_analysis.detailed_analysis?.critical_indicators?.phishing_tools?.found ? 'Detectado' : 'No detectado'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs">
+                            <span className="font-medium">Dominio Engañoso:</span>
+                            <Badge variant={result.ai_analysis.detailed_analysis?.critical_indicators?.deceptive_domain?.found ? 'destructive' : 'secondary'} className="ml-2">
+                              {result.ai_analysis.detailed_analysis?.critical_indicators?.deceptive_domain?.found ? 'Detectado' : 'No detectado'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs">
+                            <span className="font-medium">Typosquatting:</span>
+                            <Badge variant={result.ai_analysis.detailed_analysis?.critical_indicators?.typosquatting?.found ? 'destructive' : 'secondary'} className="ml-2">
+                              {result.ai_analysis.detailed_analysis?.critical_indicators?.typosquatting?.found ? 'Detectado' : 'No detectado'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs">
+                            <span className="font-medium">Solicitud de Credenciales:</span>
+                            <Badge variant={result.ai_analysis.detailed_analysis?.critical_indicators?.credential_request?.found ? 'destructive' : 'secondary'} className="ml-2">
+                              {result.ai_analysis.detailed_analysis?.critical_indicators?.credential_request?.found ? 'Detectado' : 'No detectado'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg border bg-card shadow-sm md:col-span-2 bg-blue-50 border-blue-200">
+                        <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <span className="text-lg">📋</span> Conclusión
+                        </p>
+                        <p className="text-sm text-blue-900 mb-2">
+                          {getSafeAnalysisValue(result.ai_analysis.detailed_analysis?.conclusion, 'No disponible')}
+                        </p>
+                        {result.ai_analysis.detailed_analysis?.notes && result.ai_analysis.detailed_analysis.notes.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-blue-800 mb-1">Notas:</p>
+                            <ul className="list-disc list-inside text-xs text-blue-800 space-y-1">
+                              {result.ai_analysis.detailed_analysis.notes.map((note, idx) => (
+                                <li key={idx}>{note}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="scoring">
+                  <AccordionTrigger className="py-3 px-3 rounded-md bg-muted/40 hover:bg-muted/60 text-sm sm:text-base">
+                    <div className="flex items-center gap-2">
+                      📊 Desglose de Scoring
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pt-2 px-1">
+                    <div className="bg-muted p-4 rounded-md space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Puntos de Autenticación:</span>
+                        <Badge variant={result.ai_analysis.scoring_breakdown?.authentication_points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.scoring_breakdown?.authentication_points || 0}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Puntos del Remitente:</span>
+                        <Badge variant={result.ai_analysis.scoring_breakdown?.sender_points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.scoring_breakdown?.sender_points || 0}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Puntos del Contenido:</span>
+                        <Badge variant={result.ai_analysis.scoring_breakdown?.content_points > 10 ? 'destructive' : 'secondary'}>
+                          {result.ai_analysis.scoring_breakdown?.content_points || 0}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Puntos de Contexto:</span>
+                        <Badge variant={result.ai_analysis.scoring_breakdown?.context_points < 0 ? 'default' : 'secondary'}>
+                          {result.ai_analysis.scoring_breakdown?.context_points || 0}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center border-t pt-2 mt-2">
+                        <span className="text-sm font-medium">Puntos de Enlaces:</span>
+                        <Badge variant={result.ai_analysis.scoring_breakdown?.links_points > 10 ? 'destructive' : 'secondary'}>
+                          {result.ai_analysis.scoring_breakdown?.links_points || 0}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center border-t pt-2 mt-2 bg-primary/5 -mx-4 px-4 -mb-4 pb-4 rounded-b-md">
+                        <span className="text-sm font-semibold">Risk Score Total:</span>
+                        <Badge variant={result.ai_analysis.risk_score > 50 ? 'destructive' : result.ai_analysis.risk_score > 25 ? 'secondary' : 'default'} className="text-base">
+                          {result.ai_analysis.risk_score}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <p><strong>Modelo usado:</strong> {result.ai_analysis.model_used}</p>
+                      <p><strong>Tiempo de procesamiento:</strong> {result.ai_analysis.processing_time}ms</p>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
