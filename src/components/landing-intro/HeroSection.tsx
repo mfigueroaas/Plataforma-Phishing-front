@@ -12,44 +12,38 @@ interface HeroSectionProps {
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
   return (
-    <section className="relative overflow-hidden bg-[#0a1929] text-white py-20 md:py-32 mb-16">
+    <section className="relative overflow-hidden text-white" style={{ paddingTop: '5rem', paddingBottom: '5rem', marginBottom: '0', background: 'linear-gradient(135deg, #004d2e 0%, #12665b52 50%, #00a85a0b 100%)' }}>
       {/* Background gradient effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#003366]/20 via-transparent to-[#00A859]/10"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/20"></div>
       
-      <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          {/* Badge */}
-          <div className="inline-block">
-            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859] text-sm">
-              🛡️ Proyecto de Título - Escuela de Informática UTEM
-            </span>
-          </div>
+      <div className="container mx-auto relative z-10" style={{ paddingLeft: '1rem', paddingRight: '1rem' }}>
+        <div className="mx-auto text-center" style={{ maxWidth: '56rem' }}>
 
           {/* Título principal */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl">
+          <h1 style={{ fontSize: '2.5rem', lineHeight: '1.2', fontWeight: '700', marginBottom: '2rem' }}>
             Plataforma de Phishing Simulado<br />
             y <span className="text-[#00A859]">Detección Defensiva</span>
           </h1>
 
           {/* Descripción */}
-          <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-gray-300 mx-auto" style={{ fontSize: '1.125rem', lineHeight: '1.6', maxWidth: '42rem', marginBottom: '2rem' }}>
             Solución integral para concientizar y entrenar a la comunidad universitaria. Combina simulación de ataques con herramientas de defensa activa para disminuir la tasa de clics en correos maliciosos.
           </p>
 
           {/* CTAs */}
-          <div className="flex justify-center items-center pt-4">
+          <div className="flex justify-center items-center" style={{ paddingTop: '1rem' }}>
             <Button 
-              size="lg" 
-              className="bg-[#00A859] hover:bg-[#008f4a] text-white px-8 group"
+              className="bg-[#00A859] hover:bg-[#008f4a] text-white group"
+              style={{ paddingLeft: '2rem', paddingRight: '2rem', paddingTop: '0.625rem', paddingBottom: '0.625rem', fontSize: '1rem', lineHeight: '1.5' }}
               onClick={onGetStarted}
             >
-              Entrar a la Consola
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            Entrar a la Consola
+              <ArrowRight className="group-hover:translate-x-1 transition-transform" style={{ marginLeft: '0.5rem', width: '1.25rem', height: '1.25rem' }} />
             </Button>
           </div>
         </div>
       </div>
-         <div style={{paddingTop: '20px'}}></div>
+    
     </section>
     
   );

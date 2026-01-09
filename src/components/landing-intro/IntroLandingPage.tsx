@@ -56,42 +56,45 @@ export function IntroLandingPage({ onLogin }: IntroLandingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a1929] text-white relative">
+    <div className="min-h-screen bg-[#0a1929] text-white relative overflow-x-hidden">
       {/* Navegación superior */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a1929] border-b border-white/10 shadow-lg shadow-black/20">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="w-full" style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem', maxWidth: '100%' }}>
+          <div className="flex items-center justify-between" style={{ height: '3.5rem' }}>
+            {/* Botón hamburguesa móvil */}
+            <button
+              className="lg:hidden text-white hover:text-[#00A859] transition-colors flex-shrink-0"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#00A859] rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="flex items-center flex-shrink-0" style={{ gap: '0.5rem' }}>
+              <div className="bg-[#00A859] rounded-lg flex items-center justify-center" style={{ width: '2.25rem', height: '2.25rem' }}>
+                <Shield className="text-white" style={{ width: '1.25rem', height: '1.25rem' }} />
               </div>
-              <div className="hidden sm:block">
-                <div className="text-white">UTEM</div>
-                <div className="text-[#00A859] text-sm leading-none">Ciberseguridad</div>
+              <div className="hidden md:block">
+                <div className="text-white" style={{ fontSize: '0.875rem', lineHeight: '1.2' }}>UTEM</div>
+                <div className="text-[#00A859]" style={{ fontSize: '0.7rem', lineHeight: '1' }}>Ciberseguridad</div>
               </div>
             </div>
-
-            {/* Menu Desktop */}
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#about" className="text-gray-300 hover:text-white transition-colors px-2">
-                Sobre el Proyecto
-              </a>
-              <a href="#features" className="text-gray-300 hover:text-white transition-colors px-2">
-                Características
-              </a>
-              <a href="#how-it-works" className="text-gray-300 hover:text-white transition-colors px-2">
-                Cómo Funciona
-              </a>
-            </div>
-
+           
             {/* CTAs Desktop */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center flex-shrink-0 ml-auto" style={{ gap: '0.5rem' }}>
               <Button 
-                className="bg-[#00A859] hover:bg-[#008f4a] text-white"
+                className="hidden lg:flex bg-[#00A859] hover:bg-[#008f4a] text-white"
+                style={{ fontSize: '0.875rem', paddingLeft: '1rem', paddingRight: '1rem' }}
                 onClick={openLoginDialog}
               >
-                Entrar a la Consola
+                Consola
               </Button>
             </div>
           </div>
@@ -99,37 +102,33 @@ export function IntroLandingPage({ onLogin }: IntroLandingPageProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0f1f2e] border-t border-white/10">
-            <div className="container mx-auto px-4 py-4 space-y-3">
+          <div className="lg:hidden bg-[#0f1f2e] border-t border-white/10">
+            <div className="container mx-auto space-y-3" style={{ padding: '1rem' }}>
               <a 
-                href="#about" 
-                className="block text-gray-300 hover:text-white py-2"
+                href="#sobre-proyecto" 
+                className="block text-white font-semibold bg-[#00A859]/10 hover:bg-[#00A859]/20 border border-[#00A859]/30 hover:border-[#00A859] transition-all duration-300 rounded-lg text-center"
+                style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', fontSize: '0.875rem', lineHeight: '1.5' }}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Sobre el Proyecto
               </a>
               <a 
-                href="#features" 
-                className="block text-gray-300 hover:text-white py-2"
+                href="#caracteristicas" 
+                className="block text-white font-semibold bg-[#00A859]/10 hover:bg-[#00A859]/20 border border-[#00A859]/30 hover:border-[#00A859] transition-all duration-300 rounded-lg text-center"
+                style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', fontSize: '0.875rem', lineHeight: '1.5' }}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Características
               </a>
               <a 
-                href="#how-it-works" 
-                className="block text-gray-300 hover:text-white py-2"
+                href="#como-funciona" 
+                className="block text-white font-semibold bg-[#00A859]/10 hover:bg-[#00A859]/20 border border-[#00A859]/30 hover:border-[#00A859] transition-all duration-300 rounded-lg text-center"
+                style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', fontSize: '0.875rem', lineHeight: '1.5' }}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Cómo Funciona
+                ¿Cómo Funciona?
               </a>
-              <div className="pt-3 border-t border-white/10">
-                <Button 
-                  className="w-full bg-[#00A859] hover:bg-[#008f4a] text-white"
-                  onClick={openLoginDialog}
-                >
-                  Entrar a la Consola
-                </Button>
-              </div>
+              
             </div>
           </div>
         )}
@@ -140,15 +139,15 @@ export function IntroLandingPage({ onLogin }: IntroLandingPageProps) {
       <div style={{paddingTop: '67px'}}>
         <HeroSection onGetStarted={openLoginDialog} />
       
-        <div id="about">
+        <div id="sobre-proyecto">
           <AboutProjectSection />
         </div>
         
-        <div id="features">
+        <div id="caracteristicas">
           <FeaturesSection />
         </div>
         
-        <div id="how-it-works">
+        <div id="como-funciona">
           <HowItWorksSection />
         </div>
 

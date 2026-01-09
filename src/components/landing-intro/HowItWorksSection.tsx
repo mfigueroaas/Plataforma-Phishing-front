@@ -37,56 +37,53 @@ export function HowItWorksSection() {
   ];
 
   return (
-    <section className="py-32 bg-[#0f1f2e] border-t border-white/5">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="bg-[#0f1f2e]" style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+      <div className="container mx-auto" style={{ paddingLeft: '1rem', paddingRight: '1rem' }}>
         {/* Encabezado */}
-        <div className="text-center mb-16 animate-fade-in">
-          <div className="inline-block mb-4 animate-bounce-subtle">
-            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859] text-xl backdrop-blur-sm">
+        {/* ⬇️ AQUÍ: marginBottom controla el espacio entre el texto y las cards ⬇️ */}
+        <div className="text-center animate-fade-in" style={{ marginBottom: '1rem' }}>
+          <div className="inline-block animate-bounce-subtle" style={{ marginBottom: '1rem' }}>
+            <span className="inline-flex items-center rounded-full bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859] backdrop-blur-sm" style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0.375rem', paddingBottom: '0.375rem', fontSize: '1.25rem', lineHeight: '1.5' }}>
               PROCESO
             </span>
           </div>
-          <h2 style={{fontSize: '2.5rem'}} className="text-white mb-8 font-black leading-tight animate-slide-up">
+          <h2 style={{fontSize: '2.5rem', lineHeight: '1.2', marginBottom: '1rem'}} className="text-white font-black animate-slide-up">
             Cómo funciona <span className="text-[#00A859] inline-block hover:scale-110 transition-transform duration-300">el Sistema</span>
           </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto animate-fade-in-delay">
+          <p className="text-gray-400 max-w-2xl mx-auto animate-fade-in-delay" style={{ fontSize: '1.125rem', lineHeight: '1.6' }}>
             Flujo completo: desde la simulación de ataques hasta la detección y análisis de amenazas reales
           </p>
         </div>
 
         {/* Steps */}
-        <div style={{gap: '10px'}} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        <div style={{gap: '1rem'}} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
             <div key={index} className="relative animate-slide-up" style={{animationDelay: `${index * 150}ms`}}>
               {/* Conector visual (solo desktop) */}
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-24 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-[#00A859]/30 to-transparent animate-pulse"></div>
+                <div className="hidden lg:block absolute bg-gradient-to-r from-[#00A859]/30 to-transparent animate-pulse" style={{ top: '1rem', left: '60%', width: '80%', height: '0.125rem' }}></div>
               )}
 
-              <div className="relative bg-[#1a2a3a] border border-white/10 rounded-lg p-6 hover:border-[#00A859]/50 transition-all duration-500 group hover:-translate-y-3 hover:shadow-2xl hover:shadow-[#00A859]/20">
+              <div className="relative bg-[#1a2a3a] border border-white/10 rounded-lg hover:border-[#00A859]/50 transition-all duration-500 group hover:-translate-y-3 hover:shadow-2xl hover:shadow-[#00A859]/20" style={{ padding: '1rem' }}>
                 <div className="flex flex-col">
                   {/* Banner con número e ícono - ancho completo */}
-                  <div className="flex items-center gap-4 bg-[#00A859]/10 rounded-lg py-3 px-5 mb-6 group-hover:bg-[#00A859]/20 transition-all duration-300">
-                    {/* Número */}
-                    <div className="w-12 h-12 bg-[#00A859] rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[#00A859]/50">
-                      {step.number}
-                    </div>
-                    
+                  <div className="flex items-center transition-all duration-300" style={{ gap: '1rem', paddingTop: '0.75rem', paddingBottom: '0.75rem', paddingLeft: '1.25rem', paddingRight: '1.25rem', marginBottom: '1.5rem' }}>
+             
                     {/* Ícono - centrado en su contenedor */}
                     <div className="flex-1 flex justify-center">
-                      <div className="w-12 h-12 rounded-lg bg-[#00A859]/20 border border-[#00A859]/40 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300">
-                        <step.icon className="w-6 h-6 text-[#00A859] group-hover:scale-110 transition-transform duration-300" />
+                      <div className="rounded-lg bg-[#00A859]/20 border border-[#00A859]/40 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300" style={{ width: '3rem', height: '3rem' }}>
+                        <step.icon className="text-[#00A859] group-hover:scale-110 transition-transform duration-300" style={{ width: '1.5rem', height: '1.5rem' }} />
                       </div>
                     </div>
                   </div>
 
                   {/* Título */}
-                  <h3 className="text-white text-xl md:text-2xl font-bold mb-3 text-center group-hover:text-[#00A859] transition-colors duration-300">
+                  <h3 className="text-white font-bold text-center group-hover:text-[#00A859] transition-colors duration-300" style={{ fontSize: '1.25rem', lineHeight: '1.4', marginBottom: '0.75rem' }}>
                     {step.title}
                   </h3>
 
                   {/* Descripción */}
-                  <p className="text-gray-400 text-sm leading-relaxed text-center group-hover:text-gray-300 transition-colors duration-300">
+                  <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300" style={{ fontSize: '0.875rem', lineHeight: '1.6' }}>
                     {step.description}
                   </p>
                 </div>
@@ -95,8 +92,7 @@ export function HowItWorksSection() {
           ))}
         </div>
       </div>
-          <div style={{paddingTop: '67px'}}></div>
-              <div style={{paddingTop: '67px'}}></div>
+      <div style={{paddingTop: '1rem'}}></div>
     </section>
   );
 }

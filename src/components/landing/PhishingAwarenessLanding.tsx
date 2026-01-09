@@ -167,21 +167,24 @@ export function PhishingAwarenessLanding() {
             className="mb-12 flex flex-col items-center"
           >
             <Shield
-              className="mx-auto text-[#2c5f7c] mb-4 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40"
+              className="mx-auto text-[#2c5f7c] mb-4"
+              style={{ width: '5rem', height: '10rem' }}
             />
             <motion.h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#2c5f7c] mb-6 md:mb-8 px-4 leading-tight"
+              className="font-bold text-[#2c5f7c] mb-6 md:mb-8 px-4"
+              style={{ fontSize: '2.5rem', lineHeight: '1.1' }}
               animate={{ scale: [1, 1.05, 1], y: [0, -6, 0] }}
               transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
             >
-              ⚠️ ¡Has Caído en un Phishing Educativo! ⚠️
+            ¡Has Caído en un Phishing Educativo!
             </motion.h1>
           </motion.div>
           <motion.p
             initial={{ scale: 0.7, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ delay: 0.15, type: "spring", stiffness: 120, damping: 12 }}
-            className="mt-3 md:mt-4 text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 max-w-5xl mx-auto mb-8 md:mb-10 px-4 leading-relaxed"
+            className="mt-3 md:mt-4 text-gray-600 max-w-5xl mx-auto mb-8 md:mb-10 px-4"
+            style={{ fontSize: '1.5rem', lineHeight: '1.6' }}
           >
             No te preocupes, esto es una simulación con fines educativos. Sin embargo, si hubiera sido un ataque real, tus datos
             podrían haber sido comprometidos.
@@ -191,9 +194,10 @@ export function PhishingAwarenessLanding() {
             initial={{ scale: 0.8, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 120, damping: 14 }}
-            className="bg-green-50 border-l-4 border-green-500 p-5 sm:p-6 md:p-8 max-w-4xl mx-auto rounded-r-lg shadow-sm"
+            className="border-l-4 border-green-500 p-5 sm:p-6 md:p-8 max-w-4xl mx-auto rounded-r-lg shadow-sm"
+            style={{ backgroundColor: '#c4eb5a83' }}
           >
-            <p className="text-gray-700 text-center text-lg sm:text-xl md:text-2xl leading-relaxed">
+            <p className="text-gray-700 text-center" style={{ fontSize: '1.25rem', lineHeight: '1.6' }}>
               <strong>Importante:</strong> Esta es una campaña de concientización sobre seguridad. Aprende de esta experiencia para
               protegerte de amenazas reales.
             </p>
@@ -206,7 +210,7 @@ export function PhishingAwarenessLanding() {
           transition={{ delay: 1.6 }}
           className="max-w-5xl mx-auto mb-16"
         >
-          <h2 className="text-3xl font-bold text-[#1e3a5f] mb-8 text-center">¿Por qué caíste?</h2>
+          <h2 className="font-bold text-[#1e3a5f] mb-8 text-center" style={{ fontSize: '3rem', lineHeight: '1.2' }}>¿Por qué caíste?</h2>
           <div className="bg-white rounded-lg shadow-xl p-6">
             <Slider {...sliderSettings}>
               {phishingReasons.map((reason, index) => (
@@ -223,13 +227,13 @@ export function PhishingAwarenessLanding() {
                     <div className="md:w-1/2">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="bg-[#1e3a5f]/10 p-3 rounded-lg">
-                          <reason.icon className="w-8 h-8 text-[#1e3a5f]" />
+                          <reason.icon className="text-[#1e3a5f]" style={{ width: '2rem', height: '2rem' }} />
                         </div>
-                        <h3 className="text-2xl font-bold text-[#1e3a5f]">{reason.title}</h3>
+                        <h3 className="font-bold text-[#1e3a5f]" style={{ fontSize: '1.5rem', lineHeight: '1.3' }}>{reason.title}</h3>
                       </div>
-                      <p className="text-gray-700 text-lg leading-relaxed">{reason.description}</p>
+                      <p className="text-gray-700" style={{ fontSize: '1.125rem', lineHeight: '1.6' }}>{reason.description}</p>
                       <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded">
-                        <p className="text-sm text-red-800 font-semibold">⚠️ Señal de alerta detectada</p>
+                        <p className="text-red-800 font-semibold" style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>⚠️ Señal de alerta detectada</p>
                       </div>
                     </div>
                   </div>
@@ -240,10 +244,10 @@ export function PhishingAwarenessLanding() {
         </motion.div>
 
         <Tabs defaultValue="indicators" className="max-w-6xl mx-auto mb-16">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="indicators">🔍 Indicadores</TabsTrigger>
-            <TabsTrigger value="examples">📊 Ejemplos</TabsTrigger>
-            <TabsTrigger value="practices">✅ Buenas Prácticas</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-8" style={{ backgroundColor: '#e5e7eb' }}>
+            <TabsTrigger value="indicators" style={{ backgroundColor: '#f3ff0788' }}>🔍 Indicadores</TabsTrigger>
+            <TabsTrigger value="examples" style={{ backgroundColor: '#f3ff0788' }}>📊 Ejemplos</TabsTrigger>
+            <TabsTrigger value="practices" style={{ backgroundColor: '#f3ff0788' }}>✅ Buenas Prácticas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="indicators">
@@ -258,13 +262,13 @@ export function PhishingAwarenessLanding() {
                   <Card className="p-6 h-full hover:shadow-lg transition-shadow bg-white">
                     <div className="flex items-start gap-4">
                       <div className="bg-[#1e3a5f]/10 p-3 rounded-lg">
-                        <indicator.icon className="w-6 h-6 text-[#1e3a5f]" />
+                        <indicator.icon className="text-[#1e3a5f]" style={{ width: '1.5rem', height: '1.5rem' }} />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-2">{indicator.title}</h3>
-                        <p className="text-gray-600 mb-3">{indicator.description}</p>
+                        <h3 className="font-bold mb-2" style={{ fontSize: '1.125rem', lineHeight: '1.4' }}>{indicator.title}</h3>
+                        <p className="text-gray-600 mb-3" style={{ fontSize: '1rem', lineHeight: '1.5' }}>{indicator.description}</p>
                         <div className="bg-gray-50 p-3 rounded border-l-4 border-[#00d97e]">
-                          <p className="text-sm text-gray-700">{indicator.example}</p>
+                          <p className="text-gray-700" style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>{indicator.example}</p>
                         </div>
                       </div>
                     </div>
@@ -276,7 +280,7 @@ export function PhishingAwarenessLanding() {
 
           <TabsContent value="examples">
             <Card className="p-6 bg-white">
-              <h3 className="text-2xl font-bold mb-6 text-center">¿Puedes identificar cuál es real y cuál es phishing?</h3>
+              <h3 className="font-bold mb-6 text-center" style={{ fontSize: '1.5rem', lineHeight: '1.3' }}>¿Puedes identificar cuál es real y cuál es phishing?</h3>
               <div className="space-y-4">
                 {realVsFake.map((item, index) => (
                   <motion.div
@@ -293,19 +297,20 @@ export function PhishingAwarenessLanding() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {item.type === "real" ? (
-                          <CheckCircle className="w-6 h-6 text-[#00d97e]" />
+                          <CheckCircle className="text-[#00d97e]" style={{ width: '1.5rem', height: '1.5rem' }} />
                         ) : (
-                          <XCircle className="w-6 h-6 text-red-600" />
+                          <XCircle className="text-red-600" style={{ width: '1.5rem', height: '1.5rem' }} />
                         )}
                         <div>
-                          <p className="font-mono font-bold">{item.domain}</p>
-                          <p className="text-sm text-gray-600">{item.reason}</p>
+                          <p className="font-mono font-bold" style={{ fontSize: '1rem', lineHeight: '1.4' }}>{item.domain}</p>
+                          <p className="text-gray-600" style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>{item.reason}</p>
                         </div>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-bold ${
+                        className={`px-3 py-1 rounded-full font-bold ${
                           item.type === "real" ? "bg-[#00d97e]/20 text-[#00d97e]" : "bg-red-200 text-red-800"
                         }`}
+                        style={{ fontSize: '0.875rem', lineHeight: '1.4' }}
                       >
                         {item.type === "real" ? "LEGÍTIMO" : "PHISHING"}
                       </span>
@@ -320,8 +325,8 @@ export function PhishingAwarenessLanding() {
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-6 bg-white">
                 <div className="flex items-center gap-3 mb-4">
-                  <Lock className="w-8 h-8 text-[#00d97e]" />
-                  <h3 className="text-xl font-bold">Mejores Prácticas</h3>
+                  <Lock className="text-[#00d97e]" style={{ width: '2rem', height: '2rem' }} />
+                  <h3 className="font-bold" style={{ fontSize: '1.25rem', lineHeight: '1.3' }}>Mejores Prácticas</h3>
                 </div>
                 <ul className="space-y-3">
                   {goodPractices.map((practice) => (
@@ -332,8 +337,8 @@ export function PhishingAwarenessLanding() {
                       transition={{ duration: 0.3 }}
                       className="flex items-start gap-3"
                     >
-                      <CheckCircle className="w-5 h-5 text-[#00d97e] mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{practice}</span>
+                      <CheckCircle className="text-[#00d97e] mt-0.5 flex-shrink-0" style={{ width: '1.25rem', height: '1.25rem' }} />
+                      <span className="text-gray-700" style={{ fontSize: '1rem', lineHeight: '1.5' }}>{practice}</span>
                     </motion.li>
                   ))}
                 </ul>
@@ -341,12 +346,12 @@ export function PhishingAwarenessLanding() {
 
               <Card className="p-6 bg-gradient-to-br from-[#1e3a5f]/5 to-[#1e3a5f]/10 border-2 border-[#1e3a5f]/20">
                 <div className="flex items-center gap-3 mb-4">
-                  <Eye className="w-8 h-8 text-[#1e3a5f]" />
-                  <h3 className="text-xl font-bold">Regla de Oro</h3>
+                  <Eye className="text-[#1e3a5f]" style={{ width: '2rem', height: '2rem' }} />
+                  <h3 className="font-bold" style={{ fontSize: '1.25rem', lineHeight: '1.3' }}>Regla de Oro</h3>
                 </div>
                 <div className="space-y-4">
-                  <p className="text-gray-700 font-semibold">Cuando recibas un correo sospechoso:</p>
-                  <ol className="space-y-3 list-decimal list-inside text-gray-700">
+                  <p className="text-gray-700 font-semibold" style={{ fontSize: '1rem', lineHeight: '1.5' }}>Cuando recibas un correo sospechoso:</p>
+                  <ol className="space-y-3 list-decimal list-inside text-gray-700" style={{ fontSize: '1rem', lineHeight: '1.5' }}>
                     <li>NO hagas clic en ningún enlace</li>
                     <li>NO descargues archivos adjuntos</li>
                     <li>NO proporciones información personal</li>
@@ -354,7 +359,7 @@ export function PhishingAwarenessLanding() {
                     <li>Reporta el correo a tu equipo de TI</li>
                   </ol>
                   <div className="bg-[#1e3a5f]/10 p-4 rounded-lg mt-4">
-                    <p className="text-sm text-[#1e3a5f]">
+                    <p className="text-[#1e3a5f]" style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>
                       <strong>Recuerda:</strong> Es mejor ser precavido y verificar, que lamentarse por un error que pudo haberse
                       evitado.
                     </p>
@@ -367,10 +372,10 @@ export function PhishingAwarenessLanding() {
 
         <footer className="mt-16 text-center text-gray-600 pb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Shield className="w-5 h-5 text-gray-500" />
-            <p className="font-semibold">Plataforma de Phishing Educativo</p>
+            <Shield className="text-gray-500" style={{ width: '1.25rem', height: '1.25rem' }} />
+            <p className="font-semibold" style={{ fontSize: '1rem', lineHeight: '1.5' }}>Plataforma de Phishing Educativo</p>
           </div>
-          <p className="text-sm">Educando para un entorno digital más seguro | La seguridad es responsabilidad de todos</p>
+          <p style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>Educando para un entorno digital más seguro | La seguridad es responsabilidad de todos</p>
         </footer>
       </div>
     </div>

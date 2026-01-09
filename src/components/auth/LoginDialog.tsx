@@ -240,23 +240,10 @@ export function LoginDialog({ open, onOpenChange, onLogin }: LoginDialogProps) {
           </TabsContent>
         </Tabs>
 
-        {/* Footer */}
-        <div className="mt-4 text-center text-xs text-muted-foreground">
-          <p>
-            Al iniciar sesión, aceptas los{' '}
-            <a href="#" className="text-[#00A859] hover:underline">
-              Términos de Servicio
-            </a>{' '}
-            y{' '}
-            <a href="#" className="text-[#00A859] hover:underline">
-              Política de Privacidad
-            </a>
-          </p>
-        </div>
 
         {/* Dev info */}
         <div className="mt-2 p-2 bg-black/5 dark:bg-white/5 rounded text-xs text-muted-foreground">
-          <code>POST /api/auth/login</code> | Backend: http://localhost:8080/api/v1/
+          <code>trabajo de titulo 2026</code>
         </div>
       </DialogContent>
     </Dialog>
