@@ -29,12 +29,14 @@ import {
   Send,
   CheckCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  HelpCircle
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface CreateCampaignProps {
   onBack: () => void;
@@ -180,7 +182,20 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sendByDate">Enviar antes de (opcional)</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="sendByDate">Enviar antes de (opcional)</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">
+                        Si especificas esta fecha, los correos se distribuirán gradualmente entre la fecha de lanzamiento y esta fecha. 
+                        La fecha debe ser posterior a la de lanzamiento. Sin esta opción, todos los correos se envían inmediatamente.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="sendByDate"
                   type="datetime-local"
