@@ -16,7 +16,8 @@ import {
   Clock,
   Target,
   Plus,
-  BarChart3
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
@@ -67,6 +68,10 @@ export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
     }
   };
 
+  const refreshDashboard = async () => {
+    await loadCampaigns();
+  };
+
   useEffect(() => {
     if (activeConfig?.id) {
       loadCampaigns();
@@ -111,12 +116,18 @@ export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
             Resumen de actividad y métricas de campañas de phishing educativo
           </p>
         </div>
-        {canCreateCampaigns && (
-          <Button className="gap-2 w-full sm:w-auto" onClick={onCreateClick}>
-            <Plus className="w-4 h-4" />
-            Nueva Campaña
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="gap-2 flex-1 sm:flex-initial" onClick={refreshDashboard} disabled={loading}>
+            <RefreshCw className="w-4 h-4" />
+            Recargar
           </Button>
-        )}
+          {canCreateCampaigns && (
+            <Button className="gap-2 flex-1 sm:flex-initial" onClick={onCreateClick}>
+              <Plus className="w-4 h-4" />
+              Nueva Campaña
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Config Alert */}
@@ -231,8 +242,27 @@ export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
                 const summary = summaryMap[campaign.local_id];
                 const stats = summary?.stats || { sent: 0, opened: 0, clicked: 0, email_reported: 0 };
                 const statusLower = campaign.status?.toLowerCase() || '';
-                const statusDisplay = statusLower.includes('progress') || statusLower.includes('sending') ? 'activa' :
-                                     statusLower.includes('complet') ? 'completada' : 'programada';
+                
+                // Determinar el estado display
+                let statusDisplay = 'programada';
+                if (statusLower.includes('complet')) {
+                  statusDisplay = 'completada';
+                } else if (statusLower.includes('progress') || statusLower.includes('sending')) {
+                  statusDisplay = 'activa';
+                } else if (statusLower.includes('queued') || statusLower.includes('scheduled')) {
+                  // Si tiene fecha de lanzamiento y ya pasó, mostrar como activa
+                  if (summary?.launch_date) {
+                    try {
+                      const launch = new Date(summary.launch_date);
+                      const now = new Date();
+                      if (launch <= now) {
+                        statusDisplay = 'activa';
+                      }
+                    } catch (e) {
+                      // Si hay error parseando la fecha, mantener como programada
+                    }
+                  }
+                }
 
                 return (
                   <div key={campaign.local_id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg space-y-3 sm:space-y-0">

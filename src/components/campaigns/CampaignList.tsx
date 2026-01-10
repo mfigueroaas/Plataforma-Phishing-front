@@ -133,7 +133,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, launchDate?: string) => {
     const statusLower = status?.toLowerCase() || '';
     
     if (statusLower.includes('complet')) {
@@ -141,6 +141,18 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     } else if (statusLower.includes('progress') || statusLower.includes('sending')) {
       return <Badge variant="default">Activa</Badge>;
     } else if (statusLower.includes('queued') || statusLower.includes('scheduled')) {
+      // Si tiene fecha de lanzamiento y ya pasó, mostrar como Activa
+      if (launchDate) {
+        try {
+          const launch = new Date(launchDate);
+          const now = new Date();
+          if (launch <= now) {
+            return <Badge variant="default">Activa</Badge>;
+          }
+        } catch (e) {
+          // Si hay error parseando la fecha, continuar con lógica normal
+        }
+      }
       return <Badge variant="outline">Programada</Badge>;
     } else if (statusLower.includes('error')) {
       return <Badge variant="destructive">Error</Badge>;
@@ -152,6 +164,15 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   const calculateRate = (numerator: number, denominator: number) => {
     if (denominator === 0) return 0;
     return Math.round((numerator / denominator) * 100);
+  };
+
+  const translateStatus = (status: string) => {
+    const statusLower = status?.toLowerCase() || '';
+    if (statusLower.includes('progress') || statusLower.includes('sending')) return 'En progreso';
+    if (statusLower.includes('complet')) return 'Completada';
+    if (statusLower.includes('queued') || statusLower.includes('scheduled')) return 'Programada';
+    if (statusLower.includes('error')) return 'Error';
+    return status;
   };
 
   const openDetails = async (campaign: Campaign) => {
@@ -558,7 +579,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                         <div className="border rounded-md p-3">
                           <p className="text-muted-foreground">Estado</p>
-                          <p className="font-semibold">{summary.status}</p>
+                          <p className="font-semibold">{translateStatus(summary.status)}</p>
                         </div>
                         <div className="border rounded-md p-3">
                           <p className="text-muted-foreground">Creada</p>
@@ -876,12 +897,18 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             Gestiona y monitorea tus campañas de phishing educativo
           </p>
         </div>
-        {canCreateCampaigns && (
-          <Button className="gap-2" onClick={onCreateClick}>
-            <Plus className="w-4 h-4" />
-            Nueva Campaña
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={loadCampaigns} disabled={loading}>
+            <RefreshCw className="w-4 h-4" />
+            Recargar
           </Button>
-        )}
+          {canCreateCampaigns && (
+            <Button className="gap-2" onClick={onCreateClick}>
+              <Plus className="w-4 h-4" />
+              Nueva Campaña
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -1026,7 +1053,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(campaign.status)}
+                        {getStatusBadge(campaign.status, summaryMap[campaign.local_id]?.launch_date)}
                       </TableCell>
                       <TableCell>{stats.total}</TableCell>
                       <TableCell>
