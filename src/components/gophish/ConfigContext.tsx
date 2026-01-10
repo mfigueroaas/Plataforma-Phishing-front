@@ -51,29 +51,35 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar configuraciones al montar o cambiar usuario - OPTIMIZADO
+  // Cargar configuraciones al montar o cambiar usuario/token - OPTIMIZADO
   useEffect(() => {
     let isMounted = true;
-    
-    if (user && token) {
-      // Solo cargar si no tenemos cache válido
-      const hasCache = configs.length > 0;
-      if (!hasCache) {
-        refreshConfigs();
+
+    if (user) {
+      if (token) {
+        // Solo cargar si no tenemos cache válido
+        const hasCache = configs.length > 0;
+        if (!hasCache) {
+          refreshConfigs();
+        } else {
+          // Ya tenemos cache, solo marcar como no loading
+          setLoading(false);
+        }
+
+        // Refrescar en segundo plano después de 500ms si hay cache
+        if (hasCache && isMounted) {
+          setTimeout(() => {
+            if (isMounted) {
+              refreshConfigs();
+            }
+          }, 500);
+        }
       } else {
-        // Ya tenemos cache, solo marcar como no loading
-        setLoading(false);
-      }
-      
-      // Refrescar en segundo plano después de 500ms si hay cache
-      if (hasCache && isMounted) {
-        setTimeout(() => {
-          if (isMounted) {
-            refreshConfigs();
-          }
-        }, 500);
+        // Hay usuario cacheado pero aún no hay token: esperar sin limpiar caches
+        setLoading(true);
       }
     } else {
+      // No hay usuario: limpiar caches y estado
       setConfigs([]);
       setActiveConfig(null);
       sessionStorage.removeItem('gophish_configs_cache');
@@ -84,7 +90,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     return () => {
       isMounted = false;
     };
-  }, [user?.id]); // Solo depender de user.id, no del token que cambia constantemente
+  }, [user?.id, token]);
 
   const refreshConfigs = async () => {
     if (!token) return;
