@@ -204,6 +204,11 @@ export function PhishingAwarenessLanding() {
           </motion.div>
         </div>
 
+        {/* Línea divisora */}
+        <div className="max-w-6xl mx-auto mb-16">
+          <hr className="border-t-2 border-black" />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,7 +238,6 @@ export function PhishingAwarenessLanding() {
                       </div>
                       <p className="text-gray-700" style={{ fontSize: '1.125rem', lineHeight: '1.6' }}>{reason.description}</p>
                       <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded">
-                        <p className="text-red-800 font-semibold" style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>⚠️ Señal de alerta detectada</p>
                       </div>
                     </div>
                   </div>
@@ -243,11 +247,16 @@ export function PhishingAwarenessLanding() {
           </div>
         </motion.div>
 
+        {/* Línea divisora */}
+        <div className="max-w-6xl mx-auto mb-16">
+          <hr className="border-t-2 border-black" />
+        </div>
+
         <Tabs defaultValue="indicators" className="max-w-6xl mx-auto mb-16">
           <TabsList className="grid w-full grid-cols-3 mb-8" style={{ backgroundColor: '#e5e7eb' }}>
-            <TabsTrigger value="indicators" style={{ backgroundColor: '#f3ff0788' }}>🔍 Indicadores</TabsTrigger>
-            <TabsTrigger value="examples" style={{ backgroundColor: '#f3ff0788' }}>📊 Ejemplos</TabsTrigger>
-            <TabsTrigger value="practices" style={{ backgroundColor: '#f3ff0788' }}>✅ Buenas Prácticas</TabsTrigger>
+            <TabsTrigger value="indicators" style={{ backgroundColor: '#f3ff073c', border: '2px solid #00000041' }}>INDICADORES</TabsTrigger>
+            <TabsTrigger value="examples" style={{ backgroundColor: '#f3ff073c', border: '2px solid #00000041' }}>EJEMPLOS</TabsTrigger>
+            <TabsTrigger value="practices" style={{ backgroundColor: '#f3ff073c', border: '2px solid #00000041' }}>QUE HACER?</TabsTrigger>
           </TabsList>
 
           <TabsContent value="indicators">
@@ -347,7 +356,7 @@ export function PhishingAwarenessLanding() {
               <Card className="p-6 bg-gradient-to-br from-[#1e3a5f]/5 to-[#1e3a5f]/10 border-2 border-[#1e3a5f]/20">
                 <div className="flex items-center gap-3 mb-4">
                   <Eye className="text-[#1e3a5f]" style={{ width: '2rem', height: '2rem' }} />
-                  <h3 className="font-bold" style={{ fontSize: '1.25rem', lineHeight: '1.3' }}>Regla de Oro</h3>
+                  <h3 className="font-bold" style={{ fontSize: '1.25rem', lineHeight: '1.3' }}>Que debes hacer:</h3>
                 </div>
                 <div className="space-y-4">
                   <p className="text-gray-700 font-semibold" style={{ fontSize: '1rem', lineHeight: '1.5' }}>Cuando recibas un correo sospechoso:</p>
@@ -369,6 +378,11 @@ export function PhishingAwarenessLanding() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Línea divisora */}
+        <div className="max-w-6xl mx-auto mb-16">
+          <hr className="border-t-2 border-black" />
+        </div>
 
         <footer className="mt-16 text-center text-gray-600 pb-8">
           <div className="flex items-center justify-center gap-2 mb-2">

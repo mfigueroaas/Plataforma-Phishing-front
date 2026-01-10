@@ -34,7 +34,7 @@ export function AboutProjectSection() {
           {/* Encabezado de sección */}
           <div className="text-center animate-fade-in" style={{ marginBottom: '1.5rem' }}>
             <div className="inline-block animate-bounce-subtle" style={{ marginBottom: '1rem' }}>
-              <span className="inline-flex items-center rounded-full bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859] backdrop-blur-sm" style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0rem', paddingBottom: '0.375rem', fontSize: '1.25rem', lineHeight: '1.5' }}>
+              <span className="inline-flex items-center justify-center rounded-full bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859] backdrop-blur-sm" style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0.375rem', paddingBottom: '0.375rem', fontSize: '1.25rem', lineHeight: '1.5' }}>
                 SOBRE EL PROYECTO
               </span>
             </div>
@@ -84,7 +84,7 @@ export function AboutProjectSection() {
                 </div>
                 <h3 className="text-white group-hover:text-[#00A859] transition-colors duration-300" style={{ fontSize: '1.25rem', lineHeight: '1.4' }}>El Problema</h3>
                 <p className="text-gray-400 group-hover:text-gray-300 transition-colors duration-300" style={{ fontSize: '1rem', lineHeight: '1.6' }}>
-                  El phishing es la causa inicial de más del <span className="text-[#00A859] font-semibold">30%</span> de las brechas de seguridad. 
+                  El phishing es la causa inicial de más del <span className="text-[#00A859] font-semibold">16%</span> de las brechas de seguridad. 
                   Las universidades tienen una superficie de ataque amplia (alumnos, docentes, administrativos) difícil de proteger.
                 </p>
               </div>
