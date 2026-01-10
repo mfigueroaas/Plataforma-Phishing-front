@@ -522,31 +522,31 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
 
   if (detailMode && selectedCampaign) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" className="gap-2" onClick={exitDetails}>
               <ArrowLeft className="w-4 h-4" />
               Volver
             </Button>
             <div>
-              <h1 className="text-xl font-semibold">{selectedCampaign.name}</h1>
+              <h1 className="text-lg sm:text-xl font-semibold truncate">{selectedCampaign.name}</h1>
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={refreshCampaignDetails} disabled={detailsLoading} className="gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={refreshCampaignDetails} disabled={detailsLoading} className="gap-2 flex-1 sm:flex-none">
               <RefreshCw className="w-4 h-4" />
-              Recargar
+              <span className="hidden sm:inline">Recargar</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
+            <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)} className="flex-1 sm:flex-none">
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Exportar CSV</span>
             </Button>
             {canCompleteCampaigns && (
-              <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)}>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Marcar como completada
+              <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)} className="flex-1 sm:flex-none">
+                <CheckCircle className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Completar</span>
               </Button>
             )}
           </div>
@@ -888,24 +888,24 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1>Campañas</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Campañas</h1>
+          <p className="text-sm text-muted-foreground">
             Gestiona y monitorea tus campañas de phishing educativo
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={loadCampaigns} disabled={loading}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="gap-2 flex-1 sm:flex-none" onClick={loadCampaigns} disabled={loading}>
             <RefreshCw className="w-4 h-4" />
-            Recargar
+            <span className="hidden sm:inline">Recargar</span>
           </Button>
           {canCreateCampaigns && (
-            <Button className="gap-2" onClick={onCreateClick}>
+            <Button className="gap-2 flex-1 sm:flex-none" onClick={onCreateClick}>
               <Plus className="w-4 h-4" />
-              Nueva Campaña
+              <span className="sm:inline">Nueva</span>
             </Button>
           )}
         </div>
@@ -921,7 +921,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
@@ -933,7 +933,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             </div>
             <Button 
               variant={showFilters ? 'default' : 'outline'} 
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="w-4 h-4" />
@@ -1026,7 +1026,8 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
             <div className="text-sm text-muted-foreground">No hay campañas todavía.</div>
           )}
           {!loading && filteredCampaigns.length > 0 && (
-            <Table>
+            <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+              <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
@@ -1137,6 +1138,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

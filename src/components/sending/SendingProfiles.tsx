@@ -223,30 +223,30 @@ export function SendingProfiles() {
           {profiles.map(profile => (
             <Card key={profile.local_id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <CardTitle className="flex items-center gap-2">
-                      <Send className="w-5 h-5" />
-                      {profile.name}
+                      <Send className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate">{profile.name}</span>
                     </CardTitle>
                     <CardDescription className="mt-2">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Mail className="w-3 h-3" />
-                          <span>{profile.from_address}</span>
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="break-all text-xs sm:text-sm">{profile.from_address}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Server className="w-3 h-3" />
-                          <span>{profile.host}</span>
+                          <Server className="w-3 h-3 flex-shrink-0" />
+                          <span className="break-all text-xs sm:text-sm">{profile.host}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Key className="w-3 h-3" />
-                          <span>{profile.username}</span>
+                          <Key className="w-3 h-3 flex-shrink-0" />
+                          <span className="break-all text-xs sm:text-sm">{profile.username}</span>
                         </div>
                       </div>
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{profile.interface_type}</Badge>
                     {profile.ignore_cert_errors && (
                       <Badge variant="outline">Ignorar SSL</Badge>
@@ -255,19 +255,19 @@ export function SendingProfiles() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>ID Local: {profile.local_id} | GoPhish ID: {profile.gophish_id}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+                    <p className="break-words">ID Local: {profile.local_id} | GoPhish ID: {profile.gophish_id}</p>
                     <p>Creado: {new Date(profile.created_at).toLocaleString()}</p>
                     {profile.headers && profile.headers.length > 0 && (
                       <p>Headers personalizados: {profile.headers.length}</p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {canEditSendingProfiles && (
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(profile)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(profile)} className="flex-1 sm:flex-none">
+                        <Edit className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
                       </Button>
                     )}
                     {canDeleteSendingProfiles && (
