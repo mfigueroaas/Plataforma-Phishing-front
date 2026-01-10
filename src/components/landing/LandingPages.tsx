@@ -235,16 +235,16 @@ export function LandingPages() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Páginas de Destino</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Páginas de Destino</h1>
+          <p className="text-sm text-muted-foreground mt-2">
             Crea y gestiona páginas de phishing educativo
           </p>
         </div>
         {canCreateLandingPages && (
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nueva Página
           </Button>
@@ -280,20 +280,20 @@ export function LandingPages() {
           {pages.map(page => (
             <Card key={page.local_id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <CardTitle className="flex items-center gap-2">
-                      <Globe className="w-5 h-5" />
-                      {page.name}
+                      <Globe className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate">{page.name}</span>
                     </CardTitle>
                     <CardDescription className="mt-2">
-                      <div className="space-y-1">
-                        <p>ID Local: {page.local_id} | GoPhish ID: {page.gophish_id}</p>
-                        <p>Redirigir a: <a href={page.redirect_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{page.redirect_url}</a></p>
+                      <div className="space-y-1 text-xs sm:text-sm">
+                        <p className="break-words">ID Local: {page.local_id} | GoPhish ID: {page.gophish_id}</p>
+                        <p className="break-all">Redirigir a: <a href={page.redirect_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{page.redirect_url}</a></p>
                       </div>
                     </CardDescription>
                   </div>
-                  <div className="flex flex-wrap gap-2 justify-end">
+                  <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
                     {page.capture_credentials && (
                       <Badge variant="secondary" title="Captura datos del formulario">
                         📝 Datos
@@ -308,22 +308,22 @@ export function LandingPages() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     Creada: {new Date(page.created_at).toLocaleString()}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={() => {
                       setPreviewHtml(page.html);
                       setIsPreviewDialogOpen(true);
-                    }}>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Vista Previa
+                    }} className="flex-1 sm:flex-none">
+                      <Eye className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Vista Previa</span>
                     </Button>
                     {canEditLandingPages && (
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(page)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(page)} className="flex-1 sm:flex-none">
+                        <Edit className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Editar</span>
                       </Button>
                     )}
                     {canDeleteLandingPages && (

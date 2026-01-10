@@ -30,7 +30,8 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  HelpCircle
+  HelpCircle,
+  Zap
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
@@ -147,6 +148,29 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
     }
   };
 
+  // Helper para formatear fecha al formato datetime-local (YYYY-MM-DDTHH:mm)
+  const formatDatetimeLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Botón de lanzamiento rápido: ahora + 2 min (launch) y launch + 5 min (send_by)
+  const handleQuickLaunch = () => {
+    const now = new Date();
+    const launchIn2Min = new Date(now.getTime() + 2 * 60 * 1000);
+    const sendByIn5MinFromLaunch = new Date(launchIn2Min.getTime() + 5 * 60 * 1000);
+    
+    setCampaignData({
+      ...campaignData,
+      launchDate: formatDatetimeLocal(launchIn2Min),
+      sendByDate: formatDatetimeLocal(sendByIn5MinFromLaunch)
+    });
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -171,19 +195,75 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               />
               <p className="text-xs text-muted-foreground">URL base donde se alojarán las landing pages</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="launchDate">Fecha de lanzamiento</Label>
-                <Input
-                  id="launchDate"
-                  type="datetime-local"
-                  value={campaignData.launchDate}
-                  onChange={(e) => setCampaignData({ ...campaignData, launchDate: e.target.value })}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* Fecha de lanzamiento - 6 columnas */}
+              <div className="md:col-span-6 space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Fecha de lanzamiento</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleQuickLaunch}
+                    className="gap-2"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Lanzar en 2 minutos
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Input
+                      id="launchDate"
+                      type="text"
+                      placeholder="DD/MM/AAAA"
+                      value={(() => {
+                        if (!campaignData.launchDate) return '';
+                        try {
+                          const [datePart] = campaignData.launchDate.split('T');
+                          const [y, m, d] = datePart.split('-');
+                          return `${d}/${m}/${y}`;
+                        } catch { return ''; }
+                      })()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Formato: DD/MM/YYYY
+                        const match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                        if (match) {
+                          const [, day, month, year] = match;
+                          const d = day.padStart(2, '0');
+                          const m = month.padStart(2, '0');
+                          const timePart = campaignData.launchDate?.split('T')[1] || '09:00';
+                          setCampaignData({ ...campaignData, launchDate: `${year}-${m}-${d}T${timePart}` });
+                        } else if (val === '') {
+                          setCampaignData({ ...campaignData, launchDate: '' });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="time"
+                      value={(() => {
+                        if (!campaignData.launchDate) return '';
+                        try {
+                          const [, timePart] = campaignData.launchDate.split('T');
+                          return timePart || '';
+                        } catch { return ''; }
+                      })()}
+                      onChange={(e) => {
+                        const timePart = e.target.value;
+                        const datePart = campaignData.launchDate?.split('T')[0] || new Date().toISOString().split('T')[0];
+                        setCampaignData({ ...campaignData, launchDate: `${datePart}T${timePart}` });
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
+              {/* Enviar antes de - 6 columnas */}
+              <div className="md:col-span-6 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="sendByDate">Enviar antes de (opcional)</Label>
+                  <Label>Enviar antes de <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
@@ -196,12 +276,55 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <Input
-                  id="sendByDate"
-                  type="datetime-local"
-                  value={campaignData.sendByDate}
-                  onChange={(e) => setCampaignData({ ...campaignData, sendByDate: e.target.value })}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Input
+                      id="sendByDate"
+                      type="text"
+                      placeholder="DD/MM/AAAA"
+                      value={(() => {
+                        if (!campaignData.sendByDate) return '';
+                        try {
+                          const [datePart] = campaignData.sendByDate.split('T');
+                          const [y, m, d] = datePart.split('-');
+                          return `${d}/${m}/${y}`;
+                        } catch { return ''; }
+                      })()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Formato: DD/MM/YYYY
+                        const match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                        if (match) {
+                          const [, day, month, year] = match;
+                          const d = day.padStart(2, '0');
+                          const m = month.padStart(2, '0');
+                          const timePart = campaignData.sendByDate?.split('T')[1] || '09:00';
+                          setCampaignData({ ...campaignData, sendByDate: `${year}-${m}-${d}T${timePart}` });
+                        } else if (val === '') {
+                          setCampaignData({ ...campaignData, sendByDate: '' });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="time"
+                      value={(() => {
+                        if (!campaignData.sendByDate) return '';
+                        try {
+                          const [, timePart] = campaignData.sendByDate.split('T');
+                          return timePart || '';
+                        } catch { return ''; }
+                      })()}
+
+                      onChange={(e) => {
+                        const timePart = e.target.value;
+                        const datePart = campaignData.sendByDate?.split('T')[0] || new Date().toISOString().split('T')[0];
+                        setCampaignData({ ...campaignData, sendByDate: `${datePart}T${timePart}` });
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <Alert>
@@ -556,16 +679,17 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Button variant="ghost" size="sm" className="gap-2" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
-          Volver a Campañas
+          <span className="hidden sm:inline">Volver a Campañas</span>
+          <span className="sm:hidden">Volver</span>
         </Button>
         <div>
-          <h1>Nueva Campaña</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Nueva Campaña</h1>
+          <p className="text-sm text-muted-foreground">
             Crea una nueva campaña de phishing educativo paso a paso
           </p>
         </div>
@@ -573,7 +697,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
 
       {/* Progress */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-medium">Paso {currentStep + 1} de {steps.length}</span>
             <span className="text-sm text-muted-foreground">
@@ -582,9 +706,9 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
           </div>
           <Progress value={((currentStep + 1) / steps.length) * 100} />
           
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-6 gap-2 overflow-x-auto pb-2">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center gap-2">
+              <div key={step.id} className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   index <= currentStep 
                     ? 'bg-primary text-primary-foreground' 
@@ -592,7 +716,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                 }`}>
                   <step.icon className="w-4 h-4" />
                 </div>
-                <span className={`text-xs text-center max-w-20 ${
+                <span className={`text-xs text-center max-w-16 sm:max-w-20 ${
                   index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {step.label}
@@ -614,33 +738,34 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-2">
         <Button 
           variant="outline" 
           onClick={prevStep}
           disabled={currentStep === 0 || loading}
-          className="gap-2"
+          className="gap-2 flex-1 sm:flex-none"
         >
           <ArrowLeft className="w-4 h-4" />
-          Anterior
+          <span className="hidden sm:inline">Anterior</span>
         </Button>
         
         {currentStep === steps.length - 1 ? (
           <Button 
             onClick={handleCreateCampaign}
             disabled={loading || !canCreateCampaigns || !campaignData.name || !campaignData.url || campaignData.selectedGroups.length === 0 || !campaignData.selectedTemplate || !campaignData.selectedLandingPage || !campaignData.selectedSendingProfile}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            {loading ? 'Creando...' : 'Crear campaña'}
+            {loading ? 'Creando...' : 'Crear'}
             <CheckCircle className="w-4 h-4" />
           </Button>
         ) : (
           <Button 
             onClick={nextStep}
             disabled={loading}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            Siguiente
+            <span className="hidden sm:inline">Siguiente</span>
+            <span className="sm:hidden">Sig.</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         )}
