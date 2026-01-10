@@ -248,12 +248,12 @@ export default function Groups() {
 
       {/* Dialog para crear/editar grupo */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="!w-[95vw] !max-w-[1400px] max-h-[90vh] !overflow-hidden">
           <DialogHeader>
             <DialogTitle>{isEditingId ? 'Editar Grupo' : 'Crear Nuevo Grupo'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[calc(90vh-200px)] overflow-y-auto">
             {/* Nombre del grupo */}
             <div>
               <label className="text-sm font-medium">Nombre del grupo *</label>
@@ -321,48 +321,48 @@ export default function Groups() {
             {/* Tabla de usuarios */}
             {targets.length > 0 && (
               <div className="border-t pt-4">
-                <label className="text-sm font-medium block mb-3">Usuarios ({targets.length})</label>
-                <div className="max-h-96 overflow-y-auto border rounded-md">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-muted">
-                      <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Apellido</TableHead>
-                        <TableHead>Posición</TableHead>
-                        <TableHead className="w-10">Acción</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {targets.map((t, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="text-sm">{t.email}</TableCell>
-                          <TableCell className="text-sm">{t.first_name || '-'}</TableCell>
-                          <TableCell className="text-sm">{t.last_name || '-'}</TableCell>
-                          <TableCell className="text-sm">{t.position || '-'}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeTarget(idx)}
-                              disabled={loading}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
+                <label className="text-sm font-medium block mb-3">
+                  Usuarios ({targets.length})
+                </label>
+                
+                {/* Contenedor con altura FIJA usando inline styles */}
+                <div
+                  className="border rounded-md w-full"
+                  style={{ height: '250px', overflowY: 'auto', overflowX: 'hidden', display: 'block' }}
+                >
+                    <Table className="w-full table-fixed">
+                      <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                        <TableRow>
+                          <TableHead className="w-1/2">Email</TableHead>
+                          <TableHead className="w-[15%] whitespace-nowrap">Nombre</TableHead>
+                          <TableHead className="w-[15%] whitespace-nowrap">Apellido</TableHead>
+                          <TableHead className="w-[15%] whitespace-nowrap">Posición</TableHead>
+                          <TableHead className="w-12 sticky right-0 bg-background z-20">Acción</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {targets.map((t, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-sm break-words max-w-[1px]">{t.email}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{t.first_name || '-'}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{t.last_name || '-'}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{t.position || '-'}</TableCell>
+                            <TableCell className="sticky right-0 bg-background z-20 pl-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeTarget(idx)}
+                                disabled={loading}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                 </div>
               </div>
-            )}
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
             )}
           </div>
 
