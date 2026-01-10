@@ -590,7 +590,7 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                           <p className="font-semibold">{summary.launch_date ? new Date(summary.launch_date).toLocaleString() : '—'}</p>
                         </div>
                         <div className="border rounded-md p-3">
-                          <p className="text-muted-foreground">Send by</p>
+                          <p className="text-muted-foreground">Enviar antes de</p>
                           <p className="font-semibold">{summary.send_by_date && summary.send_by_date !== '0001-01-01T00:00:00Z' ? new Date(summary.send_by_date).toLocaleString() : '—'}</p>
                         </div>
                         <div className="border rounded-md p-3">
