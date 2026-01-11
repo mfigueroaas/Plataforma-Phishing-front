@@ -291,16 +291,30 @@ export function TemplateEditor() {
 
           {/* EDITOR HTML/TEXT */}
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <Label className="text-base font-semibold">Contenido</Label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(formData.html || '')} disabled={!formData.html} className="w-full sm:w-auto">
-                  <Eye className="w-4 h-4 sm:mr-2" />
-                  <span className="text-xs sm:text-sm">Preview</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openPreviewInNewWindow(formData.html || '')}
+                    disabled={!formData.html}
+                    className="w-full sm:w-auto"
+                    aria-label="Vista previa del HTML"
+                  >
+                    <Eye className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Vista previa</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(formData.html || ''); alert('✅ HTML copiado'); }} disabled={!formData.html} className="w-full sm:w-auto">
-                  <Copy className="w-4 h-4 sm:mr-2" />
-                  <span className="text-xs sm:text-sm">Copiar HTML</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { navigator.clipboard.writeText(formData.html || ''); alert('✅ HTML copiado'); }}
+                    disabled={!formData.html}
+                    className="w-full sm:w-auto"
+                    aria-label="Copiar HTML"
+                  >
+                    <Copy className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Copiar HTML</span>
                 </Button>
               </div>
             </div>
@@ -337,7 +351,7 @@ export function TemplateEditor() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4 space-y-3 pt-4 border-t">
               {(formData.attachments || []).map((att, idx) => (
-                <div key={idx} className="grid grid-cols-1 gap-3 p-3 border rounded-lg bg-muted/30">
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
                   {/* Nombre */}
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Nombre</Label>
@@ -508,18 +522,35 @@ export function TemplateEditor() {
                       Modificado: {new Date(tpl.modified_date || tpl.created_at).toLocaleString()}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(tpl.html)} className="flex-1 sm:flex-none">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPreviewInNewWindow(tpl.html)}
+                        className="flex-1 sm:flex-none"
+                        aria-label={`Vista previa de ${tpl.name}`}
+                      >
                         <Eye className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Vista Previa</span>
                       </Button>
                       {canEditTemplates && (
-                        <Button variant="outline" size="sm" onClick={() => openEditForm(tpl)} className="flex-1 sm:flex-none">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditForm(tpl)}
+                          className="flex-1 sm:flex-none"
+                          aria-label={`Editar ${tpl.name}`}
+                        >
                           <Edit className="w-4 h-4 sm:mr-2" />
                           <span className="hidden sm:inline">Editar</span>
                         </Button>
                       )}
                       {canDeleteTemplates && (
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(tpl.local_id)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(tpl.local_id)}
+                          aria-label={`Eliminar ${tpl.name}`}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}

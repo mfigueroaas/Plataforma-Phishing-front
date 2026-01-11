@@ -313,15 +313,27 @@ export function LandingPages() {
                     Creada: {new Date(page.created_at).toLocaleString()}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setPreviewHtml(page.html);
-                      setIsPreviewDialogOpen(true);
-                    }} className="flex-1 sm:flex-none">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPreviewHtml(page.html);
+                        setIsPreviewDialogOpen(true);
+                      }}
+                      className="flex-1 sm:flex-none"
+                      aria-label={`Vista previa de ${page.name}`}
+                    >
                       <Eye className="w-4 h-4 sm:mr-2" />
                       <span className="hidden sm:inline">Vista Previa</span>
                     </Button>
                     {canEditLandingPages && (
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(page)} className="flex-1 sm:flex-none">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(page)}
+                        className="flex-1 sm:flex-none"
+                        aria-label={`Editar ${page.name}`}
+                      >
                         <Edit className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Editar</span>
                       </Button>

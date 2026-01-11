@@ -250,7 +250,7 @@ export default function Groups() {
 
       {/* Dialog para crear/editar grupo */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="!w-[95vw] !max-w-[1400px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{isEditingId ? 'Editar Grupo' : 'Crear Nuevo Grupo'}</DialogTitle>
           </DialogHeader>
