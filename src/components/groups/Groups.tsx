@@ -9,7 +9,7 @@ import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { X } from 'lucide-react';
+import { X, Users } from 'lucide-react';
 
 export default function Groups() {
   const { user } = useAuth();
@@ -175,8 +175,16 @@ export default function Groups() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Grupos de Usuarios Objetivo</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-lg">
+            <Users className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Grupos de Usuarios Objetivo</h1>
+            <p className="text-muted-foreground">Gestiona los grupos de objetivos para tus campañas</p>
+          </div>
+        </div>
         {canCreateGroups && (
           <Button onClick={() => openDialog()}>
             Crear Grupo
@@ -201,59 +209,61 @@ export default function Groups() {
             <div className="text-sm text-muted-foreground">No hay grupos todavía.</div>
           )}
           {!loading && groups.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Usuarios</TableHead>
-                  <TableHead>Creado</TableHead>
-                  <TableHead>Modificado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groups.map(g => (
-                  <TableRow key={g.local_id}>
-                    <TableCell>{g.name}</TableCell>
-                    <TableCell>{g.targets?.length ?? 0}</TableCell>
-                    <TableCell className="text-xs">{new Date(g.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-xs">{new Date(g.modified_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDialog(g)}
-                          disabled={!canEditGroups}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(g.local_id)}
-                          disabled={!canDeleteGroups}
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[120px]">Nombre</TableHead>
+                    <TableHead className="min-w-[80px]">Usuarios</TableHead>
+                    <TableHead className="min-w-[100px]">Creado</TableHead>
+                    <TableHead className="min-w-[100px]">Modificado</TableHead>
+                    <TableHead className="min-w-[160px]">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {groups.map(g => (
+                    <TableRow key={g.local_id}>
+                      <TableCell className="font-medium">{g.name}</TableCell>
+                      <TableCell>{g.targets?.length ?? 0}</TableCell>
+                      <TableCell className="text-xs">{new Date(g.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-xs">{new Date(g.modified_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDialog(g)}
+                            disabled={!canEditGroups}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(g.local_id)}
+                            disabled={!canDeleteGroups}
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Dialog para crear/editar grupo */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="!w-[95vw] !max-w-[1400px] max-h-[90vh] !overflow-hidden">
+        <DialogContent className="!w-[95vw] !max-w-[1400px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{isEditingId ? 'Editar Grupo' : 'Crear Nuevo Grupo'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 max-h-[calc(90vh-200px)] overflow-y-auto">
+          <div className="space-y-4 flex-1 overflow-y-auto px-1">
             {/* Nombre del grupo */}
             <div>
               <label className="text-sm font-medium">Nombre del grupo *</label>
@@ -280,39 +290,43 @@ export default function Groups() {
             </div>
 
             {/* Agregar usuario manual */}
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 bg-muted/30 p-3 rounded-md">
               <label className="text-sm font-medium block mb-3">Agregar usuario manualmente</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 <Input
                   placeholder="Email *"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   disabled={loading}
+                  className="w-full"
                 />
                 <Input
                   placeholder="Nombre"
                   value={newFirstName}
                   onChange={(e) => setNewFirstName(e.target.value)}
                   disabled={loading}
+                  className="w-full"
                 />
                 <Input
                   placeholder="Apellido"
                   value={newLastName}
                   onChange={(e) => setNewLastName(e.target.value)}
                   disabled={loading}
+                  className="w-full"
                 />
                 <Input
                   placeholder="Posición"
                   value={newPosition}
                   onChange={(e) => setNewPosition(e.target.value)}
                   disabled={loading}
+                  className="w-full"
                 />
               </div>
               <Button
                 variant="secondary"
                 onClick={addTarget}
                 disabled={loading || !newEmail.trim()}
-                className="w-full"
+                className="w-full sticky bottom-0 z-30 shadow-lg"
               >
                 Agregar usuario
               </Button>
@@ -325,54 +339,53 @@ export default function Groups() {
                   Usuarios ({targets.length})
                 </label>
                 
-                {/* Contenedor con altura FIJA usando inline styles */}
-                <div
-                  className="border rounded-md w-full"
-                  style={{ height: '250px', overflowY: 'auto', overflowX: 'hidden', display: 'block' }}
-                >
-                    <Table className="w-full table-fixed">
-                      <TableHeader className="sticky top-0 bg-background z-10 border-b">
-                        <TableRow>
-                          <TableHead className="w-1/2">Email</TableHead>
-                          <TableHead className="w-[15%] whitespace-nowrap">Nombre</TableHead>
-                          <TableHead className="w-[15%] whitespace-nowrap">Apellido</TableHead>
-                          <TableHead className="w-[15%] whitespace-nowrap">Posición</TableHead>
-                          <TableHead className="w-12 sticky right-0 bg-background z-20">Acción</TableHead>
+                {/* Contenedor con altura FIJA y scroll horizontal en móvil */}
+                <div className="border rounded-md w-full overflow-auto" style={{ height: '250px' }}>
+                  <Table className="min-w-[600px]">
+                    <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                      <TableRow>
+                        <TableHead className="min-w-[200px]">Email</TableHead>
+                        <TableHead className="min-w-[100px]">Nombre</TableHead>
+                        <TableHead className="min-w-[100px]">Apellido</TableHead>
+                        <TableHead className="min-w-[100px]">Posición</TableHead>
+                        <TableHead className="w-[80px] sticky right-0 bg-background">Acción</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {targets.map((t, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="text-xs sm:text-sm break-all">{t.email}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{t.first_name || '-'}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{t.last_name || '-'}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{t.position || '-'}</TableCell>
+                          <TableCell className="sticky right-0 bg-background">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeTarget(idx)}
+                              disabled={loading}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {targets.map((t, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="text-sm break-words max-w-[1px]">{t.email}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{t.first_name || '-'}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{t.last_name || '-'}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{t.position || '-'}</TableCell>
-                            <TableCell className="sticky right-0 bg-background z-20 pl-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeTarget(idx)}
-                                disabled={loading}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog} disabled={loading}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveGroup} disabled={loading || !name.trim()}>
-              {isEditingId ? 'Guardar cambios' : 'Crear grupo'}
-            </Button>
+          <DialogFooter className="sticky bottom-0 bg-background border-t pt-4 mt-4 -mx-1 px-1">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={closeDialog} disabled={loading} className="flex-1 sm:flex-none">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveGroup} disabled={loading || !name.trim()} className="flex-1 sm:flex-none">
+                {isEditingId ? 'Guardar cambios' : 'Crear grupo'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

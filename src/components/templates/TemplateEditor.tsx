@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronDown } from 'lucide-react';
+import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronDown, Mail } from 'lucide-react';
 
 export function TemplateEditor() {
   const { activeConfig } = useGoPhishConfig();
@@ -247,7 +247,18 @@ export function TemplateEditor() {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 sm:p-6 space-y-8">
+      {/* Título de la página */}
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 bg-primary rounded-lg">
+          <Mail className="w-6 h-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Plantillas de Email</h1>
+          <p className="text-muted-foreground">Gestiona las plantillas de correo para tus campañas</p>
+        </div>
+      </div>
+
       {/* FORMULARIO EDITOR - INLINE */}
       <Card className="border-2 border-primary/30">
         <CardHeader>
@@ -291,16 +302,30 @@ export function TemplateEditor() {
 
           {/* EDITOR HTML/TEXT */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <Label className="text-base font-semibold">Contenido</Label>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(formData.html || '')} disabled={!formData.html}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview Pantalla Completa
+              <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openPreviewInNewWindow(formData.html || '')}
+                    disabled={!formData.html}
+                    className="w-full sm:w-auto"
+                    aria-label="Vista previa del HTML"
+                  >
+                    <Eye className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Vista previa</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(formData.html || ''); alert('✅ HTML copiado'); }} disabled={!formData.html}>
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar HTML
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { navigator.clipboard.writeText(formData.html || ''); alert('✅ HTML copiado'); }}
+                    disabled={!formData.html}
+                    className="w-full sm:w-auto"
+                    aria-label="Copiar HTML"
+                  >
+                    <Copy className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Copiar HTML</span>
                 </Button>
               </div>
             </div>
@@ -337,7 +362,7 @@ export function TemplateEditor() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4 space-y-3 pt-4 border-t">
               {(formData.attachments || []).map((att, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end p-3 border rounded-lg bg-muted/30">
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
                   {/* Nombre */}
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Nombre</Label>
@@ -392,7 +417,7 @@ export function TemplateEditor() {
                       const list = (formData.attachments || []).filter((_, i) => i !== idx);
                       setFormData(prev => ({ ...prev, attachments: list }));
                     }}
-                    className="h-10"
+                    className="w-full sm:w-auto"
                   >
                     ✕ Eliminar
                   </Button>
@@ -486,16 +511,16 @@ export function TemplateEditor() {
             {templates.map(tpl => (
               <Card key={tpl.local_id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{tpl.name}</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg truncate">{tpl.name}</CardTitle>
                       <CardDescription className="mt-2 space-y-1">
-                        <p className="text-sm">ID Local: {tpl.local_id} | GoPhish ID: {tpl.gophish_id}</p>
-                        <p className="text-sm">Asunto: {tpl.subject}</p>
-                        {tpl.envelope_sender && <p className="text-sm">Envelope Sender: {tpl.envelope_sender}</p>}
+                        <p className="text-xs sm:text-sm break-words">ID Local: {tpl.local_id} | GoPhish ID: {tpl.gophish_id}</p>
+                        <p className="text-xs sm:text-sm break-words">Asunto: {tpl.subject}</p>
+                        {tpl.envelope_sender && <p className="text-xs sm:text-sm break-words">Envelope Sender: {tpl.envelope_sender}</p>}
                       </CardDescription>
                     </div>
-                    <div className="flex flex-wrap gap-2 justify-end">
+                    <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
                       {tpl.attachments && tpl.attachments.length > 0 && (
                         <Badge variant="secondary">Adjuntos: {tpl.attachments.length}</Badge>
                       )}
@@ -503,23 +528,40 @@ export function TemplateEditor() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
                       Modificado: {new Date(tpl.modified_date || tpl.created_at).toLocaleString()}
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openPreviewInNewWindow(tpl.html)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        Vista Previa
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPreviewInNewWindow(tpl.html)}
+                        className="flex-1 sm:flex-none"
+                        aria-label={`Vista previa de ${tpl.name}`}
+                      >
+                        <Eye className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Vista Previa</span>
                       </Button>
                       {canEditTemplates && (
-                        <Button variant="outline" size="sm" onClick={() => openEditForm(tpl)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Editar
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditForm(tpl)}
+                          className="flex-1 sm:flex-none"
+                          aria-label={`Editar ${tpl.name}`}
+                        >
+                          <Edit className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Editar</span>
                         </Button>
                       )}
                       {canDeleteTemplates && (
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(tpl.local_id)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(tpl.local_id)}
+                          aria-label={`Eliminar ${tpl.name}`}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}

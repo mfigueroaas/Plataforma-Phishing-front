@@ -64,6 +64,33 @@ export function AIPhishingDetector() {
       return truncateText(value, 300);
     };
 
+    // Validador de formato de URL para enlaces detectados
+    const validateLinkUrlFormat = (val: string): { valid: boolean; reason?: string } => {
+      const trimmed = (val || '').trim();
+      if (!trimmed) return { valid: false, reason: 'Vacía' };
+      try {
+        const urlObj = new URL(trimmed);
+        const protocolOk = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+        if (!protocolOk) return { valid: false, reason: 'Protocolo no permitido' };
+
+        const hostname = urlObj.hostname;
+        if (!hostname) return { valid: false, reason: 'Dominio ausente' };
+
+        // Permite IPs, o dominios con al menos un punto y TLD de 2+ chars
+        const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+        if (!isIp) {
+          const parts = hostname.split('.');
+          if (parts.length < 2) return { valid: false, reason: 'Dominio inválido' };
+          const tld = parts[parts.length - 1];
+          if (!tld || tld.length < 2) return { valid: false, reason: 'TLD inválido' };
+          if (parts.some((p) => !p)) return { valid: false, reason: 'Formato de dominio inválido' };
+        }
+        return { valid: true };
+      } catch {
+        return { valid: false, reason: 'Formato inválido' };
+      }
+    };
+
   const handleAnalyze = async () => {
     if (!rawEmail.trim()) {
       setError('Por favor ingresa el contenido del correo');
@@ -130,14 +157,16 @@ export function AIPhishingDetector() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Brain className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-semibold">Detector de Phishing con IA</h1>
+          <div className="p-2 bg-primary rounded-lg">
+            <Brain className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Detector de Phishing con IA</h1>
+            <p className="text-muted-foreground">Analiza correos electrónicos usando inteligencia artificial para detectar intentos de phishing</p>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Analiza correos electrónicos usando inteligencia artificial para detectar intentos de phishing
-        </p>
       </div>
 
       {/* Input Form */}
@@ -548,6 +577,20 @@ export function AIPhishingDetector() {
                                 </p>
                               </div>
                             </div>
+                            {(() => {
+                              const v = validateLinkUrlFormat(link.actual_url);
+                              if (!v.valid) {
+                                return (
+                                  <div className="mt-2 flex flex-wrap gap-1 items-center">
+                                    <Badge variant="destructive" className="text-xs">URL inválida (formato)</Badge>
+                                    {v.reason && (
+                                      <span className="text-xs text-muted-foreground">{v.reason}</span>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                             {link.is_suspicious && (
                               <Badge variant="destructive" className="text-xs mt-2">
                                 ⚠️ Sospechoso

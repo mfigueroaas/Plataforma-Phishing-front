@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -65,6 +65,27 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
     selectedLandingPage: '',
     selectedSendingProfile: ''
   });
+
+  const [launchDateInput, setLaunchDateInput] = useState('');
+  const [sendByDateInput, setSendByDateInput] = useState('');
+  const [launchDateError, setLaunchDateError] = useState<string | undefined>();
+  const [launchTimeError, setLaunchTimeError] = useState<string | undefined>();
+  const [sendByDateError, setSendByDateError] = useState<string | undefined>();
+  const [sendByTimeError, setSendByTimeError] = useState<string | undefined>();
+  const [showStepValidationErrors, setShowStepValidationErrors] = useState(false);
+
+  const minDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const maxDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setFullYear(d.getFullYear() + 3);
+    return d;
+  }, []);
 
   useEffect(() => {
     if (activeConfig?.id) {
@@ -137,23 +158,256 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
+      // Validar el paso actual
+      if (!isCurrentStepValid()) {
+        // Mostrar errores de validación
+        setShowStepValidationErrors(true);
+        return; // No avanzar
+      }
+      // Si es válido, avanzar al siguiente paso
       setCurrentStep(currentStep + 1);
+      setShowStepValidationErrors(false); // Resetear errores para el nuevo paso
     }
   };
 
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      setShowStepValidationErrors(false); // Resetear errores al retroceder
     }
   };
 
+  // Helper para formatear fecha al formato datetime-local (YYYY-MM-DDTHH:mm)
+  const formatDatetimeLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Botón de lanzamiento rápido: ahora + 2 min (launch) y launch + 5 min (send_by)
+  const handleQuickLaunch = () => {
+    const now = new Date();
+    const launchIn2Min = new Date(now.getTime() + 2 * 60 * 1000);
+    const sendByIn5MinFromLaunch = new Date(launchIn2Min.getTime() + 5 * 60 * 1000);
+    
+    setCampaignData({
+      ...campaignData,
+      launchDate: formatDatetimeLocal(launchIn2Min),
+      sendByDate: formatDatetimeLocal(sendByIn5MinFromLaunch)
+    });
+  };
+
+  const formatDisplayDate = (value?: string) => {
+    if (!value) return '';
+    try {
+      const [datePart] = value.split('T');
+      const [y, m, d] = datePart.split('-');
+      return `${d}/${m}/${y}`;
+    } catch {
+      return '';
+    }
+  };
+
+  const parseDisplayDate = (value: string) => {
+    const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return { valid: false, datePart: '', error: 'Usa el formato DD/MM/AAAA' };
+
+    const [, dayStr, monthStr, yearStr] = match;
+    const day = Number(dayStr);
+    const month = Number(monthStr);
+    const year = Number(yearStr);
+
+    const dateObj = new Date(year, month - 1, day);
+    const isValidDate =
+      dateObj.getFullYear() === year &&
+      dateObj.getMonth() === month - 1 &&
+      dateObj.getDate() === day;
+
+    if (!isValidDate) {
+      return { valid: false, datePart: '', error: 'Fecha inválida' };
+    }
+
+    if (dateObj < minDate) {
+      return { valid: false, datePart: '', error: 'No puede ser anterior a hoy' };
+    }
+
+    if (dateObj > maxDate) {
+      const maxD = String(maxDate.getDate()).padStart(2, '0');
+      const maxM = String(maxDate.getMonth() + 1).padStart(2, '0');
+      const maxY = maxDate.getFullYear();
+      return { valid: false, datePart: '', error: `Fecha demasiado lejana (máx. ${maxD}/${maxM}/${maxY})` };
+    }
+
+    const d = String(day).padStart(2, '0');
+    const m = String(month).padStart(2, '0');
+    return { valid: true, datePart: `${year}-${m}-${d}`, error: '' };
+  };
+
+  const toDateOnly = (datePart: string) => {
+    const [y, m, d] = datePart.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
+  const parseTimeInput = (value: string) => {
+    const trimmed = value.trim().toLowerCase();
+
+    // 24h format HH:MM
+    const twentyFour = trimmed.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (twentyFour) {
+      const [, h, m] = twentyFour;
+      const hours = String(Number(h)).padStart(2, '0');
+      return { valid: true, timePart: `${hours}:${m}`, minutes: Number(hours) * 60 + Number(m), error: '' };
+    }
+
+    // 12h format h:MM am/pm
+    const twelve = trimmed.match(/^([1-9]|1[0-2]):([0-5]\d)\s*(am|pm)$/);
+    if (twelve) {
+      const [, h, m, ap] = twelve;
+      let hoursNum = Number(h) % 12;
+      if (ap === 'pm') hoursNum += 12;
+      const hours = String(hoursNum).padStart(2, '0');
+      return { valid: true, timePart: `${hours}:${m}`, minutes: hoursNum * 60 + Number(m), error: '' };
+    }
+
+    return { valid: false, timePart: '', minutes: 0, error: 'Hora inválida (usa HH:MM o h:mm AM/PM)' };
+  };
+
+  const toDateTime = (datePart: string, timePart: string) => {
+    return new Date(`${datePart}T${timePart}`);
+  };
+
+  // Validador de formato de URL (http/https)
+  const isValidUrlFormat = (value: string): boolean => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (/\s/.test(trimmed)) return false; // sin espacios
+    try {
+      const u = new URL(trimmed);
+      const protocolOk = u.protocol === 'http:' || u.protocol === 'https:';
+      const hostOk = !!u.hostname && u.hostname.includes('.');
+      return protocolOk && hostOk;
+    } catch {
+      return false;
+    }
+  };
+
+  // Funciones de validación por paso
+  const isStep0Valid = (): boolean => {
+    // Validar: nombre, URL en formato válido y fecha de lanzamiento (sin errores)
+    const hasName = campaignData.name.trim().length > 0;
+    const urlVal = campaignData.url.trim();
+    const hasUrl = urlVal.length > 0;
+    const hasValidUrl = hasUrl && isValidUrlFormat(urlVal);
+    const hasLaunchDate = campaignData.launchDate !== '';
+    const noDateErrors = !launchDateError && !launchTimeError;
+    return hasName && hasValidUrl && hasLaunchDate && noDateErrors;
+  };
+
+  const getStep0Errors = (): string[] => {
+    const errors: string[] = [];
+    const urlVal = campaignData.url.trim();
+    if (!campaignData.name.trim()) errors.push('Nombre de la campaña es requerido');
+    if (!urlVal) {
+      errors.push('URL de la campaña es requerida');
+    } else if (!isValidUrlFormat(urlVal)) {
+      errors.push('URL inválida. Usa formato https://dominio.com o http://dominio.com');
+    }
+    if (!campaignData.launchDate) errors.push('Fecha de lanzamiento es requerida');
+    if (launchDateError) errors.push(`Fecha: ${launchDateError}`);
+    if (launchTimeError) errors.push(`Hora: ${launchTimeError}`);
+    if (campaignData.sendByDate && (sendByDateError || sendByTimeError)) {
+      if (sendByDateError) errors.push(`Enviar antes (fecha): ${sendByDateError}`);
+      if (sendByTimeError) errors.push(`Enviar antes (hora): ${sendByTimeError}`);
+    }
+    return errors;
+  };
+
+  const isStep1Valid = (): boolean => {
+    return campaignData.selectedGroups.length > 0;
+  };
+
+  const getStep1Errors = (): string[] => {
+    const errors: string[] = [];
+    if (campaignData.selectedGroups.length === 0) {
+      errors.push('Debes seleccionar al menos un grupo de objetivos');
+    }
+    return errors;
+  };
+
+  const isStep2Valid = (): boolean => {
+    return campaignData.selectedTemplate !== '' && campaignData.selectedLandingPage !== '';
+  };
+
+  const getStep2Errors = (): string[] => {
+    const errors: string[] = [];
+    if (!campaignData.selectedTemplate) errors.push('Debes seleccionar una plantilla de email');
+    if (!campaignData.selectedLandingPage) errors.push('Debes seleccionar una página de destino');
+    return errors;
+  };
+
+  const isStep3Valid = (): boolean => {
+    return campaignData.selectedSendingProfile !== '';
+  };
+
+  const getStep3Errors = (): string[] => {
+    const errors: string[] = [];
+    if (!campaignData.selectedSendingProfile) errors.push('Debes seleccionar un perfil de envío SMTP');
+    return errors;
+  };
+
+  const isCurrentStepValid = (): boolean => {
+    switch (currentStep) {
+      case 0: return isStep0Valid();
+      case 1: return isStep1Valid();
+      case 2: return isStep2Valid();
+      case 3: return isStep3Valid();
+      case 4: return true; // Paso de revisión siempre es válido
+      default: return true;
+    }
+  };
+
+  const getCurrentStepErrors = (): string[] => {
+    switch (currentStep) {
+      case 0: return getStep0Errors();
+      case 1: return getStep1Errors();
+      case 2: return getStep2Errors();
+      case 3: return getStep3Errors();
+      case 4: return [];
+      default: return [];
+    }
+  };
+
+  useEffect(() => {
+    setLaunchDateInput(formatDisplayDate(campaignData.launchDate));
+    setSendByDateInput(formatDisplayDate(campaignData.sendByDate));
+  }, [campaignData.launchDate, campaignData.sendByDate]);
+
   const renderStepContent = () => {
+    // Alert de errores de validación
+    const stepErrors = showStepValidationErrors ? getCurrentStepErrors() : [];
+    
     switch (currentStep) {
       case 0:
         return (
           <div className="space-y-6">
+            {stepErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Campos requeridos incompletos</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {stepErrors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre de la Campaña *</Label>
+              <Label htmlFor="name">Nombre de la Campaña</Label>
               <Input
                 id="name"
                 placeholder="Ej: Entrenamiento Phishing Q1 2024"
@@ -162,7 +416,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="url">URL de la campaña *</Label>
+              <Label htmlFor="url">URL de la campaña</Label>
               <Input
                 id="url"
                 placeholder="https://midominio.com"
@@ -171,19 +425,123 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               />
               <p className="text-xs text-muted-foreground">URL base donde se alojarán las landing pages</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="launchDate">Fecha de lanzamiento</Label>
-                <Input
-                  id="launchDate"
-                  type="datetime-local"
-                  value={campaignData.launchDate}
-                  onChange={(e) => setCampaignData({ ...campaignData, launchDate: e.target.value })}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* Fecha de lanzamiento - 6 columnas */}
+              <div className="md:col-span-6 space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="launchDate">Fecha de lanzamiento</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleQuickLaunch}
+                    className="gap-2"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Lanzar en 2 minutos
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Input
+                      id="launchDate"
+                      type="text"
+                      placeholder="DD/MM/AAAA"
+                      aria-label="Fecha de lanzamiento"
+                      value={launchDateInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLaunchDateInput(val);
+
+                        if (val === '') {
+                          setCampaignData({ ...campaignData, launchDate: '' });
+                          setLaunchDateError(undefined);
+                          return;
+                        }
+
+                        const parsed = parseDisplayDate(val);
+                        if (parsed.valid) {
+                          const timePart = campaignData.launchDate?.split('T')[1] || '09:00';
+                          const candidate = toDateTime(parsed.datePart, timePart);
+                          const now = new Date();
+                          now.setSeconds(0, 0);
+                          if (candidate < now) {
+                            setLaunchDateError('Fecha en el pasado. Selecciona hoy o una fecha futura');
+                            return;
+                          }
+                          setCampaignData({ ...campaignData, launchDate: `${parsed.datePart}T${timePart}` });
+                          setLaunchDateError(undefined);
+                        } else if (parsed.error) {
+                          setLaunchDateError(parsed.error);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (launchDateInput.trim() === '') return;
+                        const parsed = parseDisplayDate(launchDateInput.trim());
+                        if (!parsed.valid) {
+                          setLaunchDateError(parsed.error);
+                          return;
+                        }
+                        const timePart = campaignData.launchDate?.split('T')[1] || '09:00';
+                        const candidate = toDateTime(parsed.datePart, timePart);
+                        const now = new Date();
+                        now.setSeconds(0, 0);
+                        if (candidate < now) {
+                          setLaunchDateError('Fecha en el pasado. Selecciona hoy o una fecha futura');
+                          return;
+                        }
+                        setCampaignData({ ...campaignData, launchDate: `${parsed.datePart}T${timePart}` });
+                        setLaunchDateError(undefined);
+                      }}
+                    />
+                    {launchDateError && (
+                      <p className="text-xs text-destructive mt-1">{launchDateError}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Input
+                      type="time"
+                      value={(() => {
+                        if (!campaignData.launchDate) return '';
+                        try {
+                          const [, timePart] = campaignData.launchDate.split('T');
+                          return timePart || '';
+                        } catch { return ''; }
+                      })()}
+                      onChange={(e) => {
+                        const timePart = e.target.value;
+                        const parsed = parseDisplayDate(launchDateInput);
+                        const datePart = parsed.valid ? parsed.datePart : campaignData.launchDate?.split('T')[0];
+                        if (!datePart) {
+                          setLaunchTimeError('Ingresa primero la fecha de lanzamiento');
+                          return;
+                        }
+                        const parsedTime = parseTimeInput(timePart);
+                        if (!parsedTime.valid) {
+                          setLaunchTimeError(parsedTime.error);
+                          return;
+                        }
+                        const candidate = toDateTime(datePart, parsedTime.timePart);
+                        const now = new Date();
+                        now.setSeconds(0, 0);
+                        if (candidate < now) {
+                          setLaunchTimeError('Hora en el pasado. La fecha y hora deben ser futuras');
+                          return;
+                        }
+                        setCampaignData({ ...campaignData, launchDate: `${datePart}T${parsedTime.timePart}` });
+                        setLaunchTimeError(undefined);
+                      }}
+                    />
+                    {launchTimeError && (
+                      <p className="text-xs text-destructive mt-1">{launchTimeError}</p>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
+              {/* Enviar antes de - 6 columnas */}
+              <div className="md:col-span-6 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="sendByDate">Enviar antes de (opcional)</Label>
+                  <Label htmlFor="sendByDate">Enviar antes de <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
@@ -196,12 +554,134 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <Input
-                  id="sendByDate"
-                  type="datetime-local"
-                  value={campaignData.sendByDate}
-                  onChange={(e) => setCampaignData({ ...campaignData, sendByDate: e.target.value })}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Input
+                      id="sendByDate"
+                      type="text"
+                      placeholder="DD/MM/AAAA"
+                      aria-label="Enviar antes de"
+                      value={sendByDateInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSendByDateInput(val);
+
+                        if (val === '') {
+                          setCampaignData({ ...campaignData, sendByDate: '' });
+                          setSendByDateError(undefined);
+                          return;
+                        }
+
+                        const parsed = parseDisplayDate(val);
+                        if (parsed.valid) {
+                          const sendDateObj = toDateOnly(parsed.datePart);
+                          if (campaignData.launchDate) {
+                            const launchDatePart = campaignData.launchDate.split('T')[0];
+                            const launchDateObj = toDateOnly(launchDatePart);
+                            if (sendDateObj < launchDateObj) {
+                              setSendByDateError('Debe ser posterior a la fecha de lanzamiento');
+                              return;
+                            }
+                          }
+                          const timePart = campaignData.sendByDate?.split('T')[1] || '09:00';
+                          const candidate = toDateTime(parsed.datePart, timePart);
+                          const now = new Date();
+                          now.setSeconds(0, 0);
+                          if (candidate < now) {
+                            setSendByDateError('Fecha en el pasado. Selecciona hoy o una fecha futura');
+                            return;
+                          }
+                          setCampaignData({ ...campaignData, sendByDate: `${parsed.datePart}T${timePart}` });
+                          setSendByDateError(undefined);
+                        } else if (parsed.error) {
+                          setSendByDateError(parsed.error);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (sendByDateInput.trim() === '') return;
+                        const parsed = parseDisplayDate(sendByDateInput.trim());
+                        if (!parsed.valid) {
+                          setSendByDateError(parsed.error);
+                          return;
+                        }
+                        const sendDateObj = toDateOnly(parsed.datePart);
+                        if (campaignData.launchDate) {
+                          const launchDatePart = campaignData.launchDate.split('T')[0];
+                          const launchDateObj = toDateOnly(launchDatePart);
+                          if (sendDateObj < launchDateObj) {
+                            setSendByDateError('Debe ser posterior a la fecha de lanzamiento');
+                            return;
+                          }
+                        }
+                        const timePart = campaignData.sendByDate?.split('T')[1] || '09:00';
+                        const candidate = toDateTime(parsed.datePart, timePart);
+                        const now = new Date();
+                        now.setSeconds(0, 0);
+                        if (candidate < now) {
+                          setSendByDateError('Fecha en el pasado. Selecciona hoy o una fecha futura');
+                          return;
+                        }
+                        setCampaignData({ ...campaignData, sendByDate: `${parsed.datePart}T${timePart}` });
+                        setSendByDateError(undefined);
+                      }}
+                    />
+                    {sendByDateError && (
+                      <p className="text-xs text-destructive mt-1">{sendByDateError}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Input
+                      type="time"
+                      value={(() => {
+                        if (!campaignData.sendByDate) return '';
+                        try {
+                          const [, timePart] = campaignData.sendByDate.split('T');
+                          return timePart || '';
+                        } catch { return ''; }
+                      })()}
+
+                      onChange={(e) => {
+                        const timePart = e.target.value;
+                        const parsed = parseDisplayDate(sendByDateInput);
+                        const datePart = parsed.valid ? parsed.datePart : campaignData.sendByDate?.split('T')[0];
+                        if (!datePart) {
+                          setSendByTimeError('Ingresa primero la fecha de envío');
+                          return;
+                        }
+                        const parsedTime = parseTimeInput(timePart);
+                        if (!parsedTime.valid) {
+                          setSendByTimeError(parsedTime.error);
+                          return;
+                        }
+                        const candidate = toDateTime(datePart, parsedTime.timePart);
+                        const now = new Date();
+                        now.setSeconds(0, 0);
+                        if (candidate < now) {
+                          setSendByTimeError('Hora en el pasado. La fecha y hora deben ser futuras');
+                          return;
+                        }
+                        if (campaignData.launchDate) {
+                          const launchDatePart = campaignData.launchDate.split('T')[0];
+                          const launchDateObj = toDateOnly(launchDatePart);
+                          const launchDateTime = toDateTime(launchDatePart, campaignData.launchDate.split('T')[1] || '00:00');
+                          if (candidate < launchDateTime) {
+                            setSendByTimeError('Debe ser posterior a la fecha de lanzamiento');
+                            return;
+                          }
+                          if (toDateOnly(datePart) < launchDateObj) {
+                            setSendByTimeError('Debe ser posterior a la fecha de lanzamiento');
+                            return;
+                          }
+                        }
+                        setCampaignData({ ...campaignData, sendByDate: `${datePart}T${parsedTime.timePart}` });
+                        setSendByTimeError(undefined);
+                      }}
+                    />
+                    {sendByTimeError && (
+                      <p className="text-xs text-destructive mt-1">{sendByTimeError}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
             <Alert>
@@ -216,8 +696,21 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
       case 1:
         return (
           <div className="space-y-6">
+            {stepErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Campos requeridos incompletos</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {stepErrors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label>Grupos de Objetivos *</Label>
+              <Label>Grupos de Objetivos</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando grupos...</div>}
               {!loading && groups.length === 0 && (
                 <Alert>
@@ -324,8 +817,21 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
       case 2:
         return (
           <div className="space-y-6">
+            {stepErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Campos requeridos incompletos</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {stepErrors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="template">Plantilla de Email *</Label>
+              <Label htmlFor="template">Plantilla de Email</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando plantillas...</div>}
               {!loading && (
                 <Select 
@@ -347,7 +853,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="landingPage">Página de destino *</Label>
+              <Label htmlFor="landingPage">Página de destino</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando páginas...</div>}
               {!loading && (
                 <Select 
@@ -383,8 +889,21 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
       case 3:
         return (
           <div className="space-y-6">
+            {stepErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Campos requeridos incompletos</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {stepErrors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="sendingProfile">Perfil de Envío (SMTP) *</Label>
+              <Label htmlFor="sendingProfile">Perfil de Envío (SMTP)</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando perfiles...</div>}
               {!loading && (
                 <Select 
@@ -556,16 +1075,16 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Button variant="ghost" size="sm" className="gap-2" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
-          Volver a Campañas
+          <span>Volver</span>
         </Button>
         <div>
-          <h1>Nueva Campaña</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Nueva Campaña</h1>
+          <p className="text-sm text-muted-foreground">
             Crea una nueva campaña de phishing educativo paso a paso
           </p>
         </div>
@@ -573,7 +1092,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
 
       {/* Progress */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-medium">Paso {currentStep + 1} de {steps.length}</span>
             <span className="text-sm text-muted-foreground">
@@ -582,9 +1101,9 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
           </div>
           <Progress value={((currentStep + 1) / steps.length) * 100} />
           
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-6 gap-2 overflow-x-auto pb-2">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center gap-2">
+              <div key={step.id} className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   index <= currentStep 
                     ? 'bg-primary text-primary-foreground' 
@@ -592,7 +1111,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
                 }`}>
                   <step.icon className="w-4 h-4" />
                 </div>
-                <span className={`text-xs text-center max-w-20 ${
+                <span className={`text-xs text-center max-w-16 sm:max-w-20 ${
                   index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {step.label}
@@ -614,33 +1133,33 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-2">
         <Button 
           variant="outline" 
           onClick={prevStep}
           disabled={currentStep === 0 || loading}
-          className="gap-2"
+          className="gap-2 flex-1 sm:flex-none"
         >
           <ArrowLeft className="w-4 h-4" />
-          Anterior
+          <span className="hidden sm:inline">Anterior</span>
         </Button>
         
         {currentStep === steps.length - 1 ? (
           <Button 
             onClick={handleCreateCampaign}
             disabled={loading || !canCreateCampaigns || !campaignData.name || !campaignData.url || campaignData.selectedGroups.length === 0 || !campaignData.selectedTemplate || !campaignData.selectedLandingPage || !campaignData.selectedSendingProfile}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            {loading ? 'Creando...' : 'Crear campaña'}
+            {loading ? 'Creando...' : 'Crear'}
             <CheckCircle className="w-4 h-4" />
           </Button>
         ) : (
           <Button 
             onClick={nextStep}
             disabled={loading}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            Siguiente
+            <span>Siguiente</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         )}

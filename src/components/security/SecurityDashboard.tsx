@@ -236,7 +236,7 @@ export function SecurityDashboard() {
             <Shield className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Security Dashboard</h1>
+            <h1 className="text-3xl font-bold">Detección de URL</h1>
             <p className="text-muted-foreground">Analiza URLs para detectar amenazas de seguridad</p>
           </div>
         </div>
