@@ -407,7 +407,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre de la Campaña *</Label>
+              <Label htmlFor="name">Nombre de la Campaña</Label>
               <Input
                 id="name"
                 placeholder="Ej: Entrenamiento Phishing Q1 2024"
@@ -416,7 +416,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="url">URL de la campaña *</Label>
+              <Label htmlFor="url">URL de la campaña</Label>
               <Input
                 id="url"
                 placeholder="https://midominio.com"
@@ -710,7 +710,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label>Grupos de Objetivos *</Label>
+              <Label>Grupos de Objetivos</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando grupos...</div>}
               {!loading && groups.length === 0 && (
                 <Alert>
@@ -831,7 +831,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="template">Plantilla de Email *</Label>
+              <Label htmlFor="template">Plantilla de Email</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando plantillas...</div>}
               {!loading && (
                 <Select 
@@ -853,7 +853,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="landingPage">Página de destino *</Label>
+              <Label htmlFor="landingPage">Página de destino</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando páginas...</div>}
               {!loading && (
                 <Select 
@@ -903,7 +903,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="sendingProfile">Perfil de Envío (SMTP) *</Label>
+              <Label htmlFor="sendingProfile">Perfil de Envío (SMTP)</Label>
               {loading && <div className="text-sm text-muted-foreground">Cargando perfiles...</div>}
               {!loading && (
                 <Select 
@@ -1159,8 +1159,7 @@ export function CreateCampaign({ onBack }: CreateCampaignProps) {
             disabled={loading}
             className="gap-2 flex-1 sm:flex-none"
           >
-            <span className="hidden sm:inline">Siguiente</span>
-            <span className="sm:hidden">Sig.</span>
+            <span>Siguiente</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         )}
