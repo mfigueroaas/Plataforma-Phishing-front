@@ -9,7 +9,7 @@ import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { X } from 'lucide-react';
+import { X, Users } from 'lucide-react';
 
 export default function Groups() {
   const { user } = useAuth();
@@ -175,8 +175,16 @@ export default function Groups() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Grupos de Usuarios Objetivo</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-lg">
+            <Users className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Grupos de Usuarios Objetivo</h1>
+            <p className="text-muted-foreground">Gestiona los grupos de objetivos para tus campañas</p>
+          </div>
+        </div>
         {canCreateGroups && (
           <Button onClick={() => openDialog()}>
             Crear Grupo

@@ -166,11 +166,16 @@ export function UserManagement() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">
-            Administra usuarios y sus permisos en la plataforma
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-lg">
+            <UserCog className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
+            <p className="text-muted-foreground">
+              Administra usuarios y sus permisos en la plataforma
+            </p>
+          </div>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>

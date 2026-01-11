@@ -13,7 +13,7 @@ import { Login } from './components/auth/Login';
 import { useIsMobile } from './components/ui/use-mobile';
 import { Button } from './components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
-import { Menu, Shield } from 'lucide-react';
+import { Menu, Shield, BookOpen } from 'lucide-react';
 import { SendingProfiles } from './components/sending/SendingProfiles';
 import Groups from './components/groups/Groups';
 import { PerformanceDebug } from './components/ui/performance-debug';
@@ -176,10 +176,17 @@ export default function App() {
       case 'guide':
         return (
           <div className="p-4 sm:p-6">
-            <h1 className="text-xl sm:text-2xl">Guía de Usuario</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Documentación y tutoriales en desarrollo...
-            </p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-primary rounded-lg">
+                <BookOpen className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Guía de Usuario</h1>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                  Documentación y tutoriales en desarrollo...
+                </p>
+              </div>
+            </div>
           </div>
         );
       case 'api':

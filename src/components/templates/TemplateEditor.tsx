@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronDown } from 'lucide-react';
+import { Eye, Plus, Edit, Trash2, Loader2, Download, Copy, AlertCircle, ChevronDown, Mail } from 'lucide-react';
 
 export function TemplateEditor() {
   const { activeConfig } = useGoPhishConfig();
@@ -248,6 +248,17 @@ export function TemplateEditor() {
 
   return (
     <div className="p-4 sm:p-6 space-y-8">
+      {/* Título de la página */}
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 bg-primary rounded-lg">
+          <Mail className="w-6 h-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Plantillas de Email</h1>
+          <p className="text-muted-foreground">Gestiona las plantillas de correo para tus campañas</p>
+        </div>
+      </div>
+
       {/* FORMULARIO EDITOR - INLINE */}
       <Card className="border-2 border-primary/30">
         <CardHeader>

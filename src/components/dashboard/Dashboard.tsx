@@ -17,7 +17,8 @@ import {
   Target,
   Plus,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  LayoutDashboard
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
@@ -110,11 +111,16 @@ export function Dashboard({ onCreateClick, onViewDetails }: DashboardProps) {
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <div>
-          <h1 className="text-xl sm:text-2xl">Dashboard</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Resumen de actividad y métricas de campañas de phishing educativo
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-lg">
+            <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Resumen de actividad y métricas de campañas de phishing educativo
+            </p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" className="gap-2 flex-1 sm:flex-initial" onClick={refreshDashboard} disabled={loading}>

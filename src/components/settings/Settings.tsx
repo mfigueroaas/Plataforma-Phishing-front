@@ -8,7 +8,7 @@ import { Label } from '../ui/label';
 import { Tabs, TabsContent } from '../ui/tabs';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
-import { Server, Mail, Shield, Key, Plus, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Server, Mail, Shield, Key, Plus, Trash2, CheckCircle2, XCircle, Loader2, Settings as SettingsIcon } from 'lucide-react';
 
 export function Settings() {
   const { user, canCreate, canEdit, canDelete, isAdmin } = useAuth();
@@ -73,11 +73,16 @@ export function Settings() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
-        <p className="text-muted-foreground mt-2">
-          Gestiona las conexiones con GoPhish y configuraciones del sistema
-        </p>
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 bg-primary rounded-lg">
+          <SettingsIcon className="w-6 h-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Configuración</h1>
+          <p className="text-muted-foreground">
+            Gestiona las conexiones con GoPhish y configuraciones del sistema
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="gophish" className="space-y-4">

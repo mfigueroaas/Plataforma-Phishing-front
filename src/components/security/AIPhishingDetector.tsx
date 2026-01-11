@@ -157,14 +157,16 @@ export function AIPhishingDetector() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Brain className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-semibold">Detector de Phishing con IA</h1>
+          <div className="p-2 bg-primary rounded-lg">
+            <Brain className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Detector de Phishing con IA</h1>
+            <p className="text-muted-foreground">Analiza correos electrónicos usando inteligencia artificial para detectar intentos de phishing</p>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Analiza correos electrónicos usando inteligencia artificial para detectar intentos de phishing
-        </p>
       </div>
 
       {/* Input Form */}

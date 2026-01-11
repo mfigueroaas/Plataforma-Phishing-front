@@ -237,11 +237,16 @@ export function LandingPages() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Páginas de Destino</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Crea y gestiona páginas de phishing educativo
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-lg">
+            <Globe className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Páginas de Destino</h1>
+            <p className="text-sm text-muted-foreground">
+              Crea y gestiona páginas de phishing educativo
+            </p>
+          </div>
         </div>
         {canCreateLandingPages && (
           <Button onClick={() => setIsCreateDialogOpen(true)} className="w-full sm:w-auto">
