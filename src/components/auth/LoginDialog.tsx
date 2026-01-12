@@ -118,7 +118,7 @@ export function LoginDialog({ open, onOpenChange, onLogin }: LoginDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-full max-w-sm">
         <DialogHeader>
           <div className="mx-auto w-12 h-12 bg-[#00A859] rounded-lg flex items-center justify-center mb-4">
             <Shield className="w-7 h-7 text-white" />
@@ -243,7 +243,7 @@ export function LoginDialog({ open, onOpenChange, onLogin }: LoginDialogProps) {
 
         {/* Dev info */}
         <div className="mt-2 p-2 bg-black/5 dark:bg-white/5 rounded text-xs text-muted-foreground">
-          <code>trabajo de titulo 2026</code>
+          <code>Desarrollado por Estudiantes UTEM</code>
         </div>
       </DialogContent>
     </Dialog>
