@@ -50,7 +50,7 @@ export default function App() {
 
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
   const urlParams = new URLSearchParams(window.location.search);
-  const isAwarenessLanding = pathname === '/rutadelalanding';
+  const isAwarenessLanding = pathname === '/concientizacion';
   const isLandingPage = urlParams.get('landing') === 'true';
   
   if (isAwarenessLanding) {
