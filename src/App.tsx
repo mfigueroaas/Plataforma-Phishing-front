@@ -27,6 +27,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedCampaignToOpen, setSelectedCampaignToOpen] = useState<any>(null);
   const isMobile = useIsMobile();
   
   // ⬇️ USAR AUTHCONTEXT en lugar de estado local
@@ -93,11 +94,20 @@ export default function App() {
               setCurrentPage('campaigns');
               setIsCreatingCampaign(true);
             }}
-            onViewDetails={() => setCurrentPage('campaigns')}
+            onViewDetails={(campaign) => {
+              setSelectedCampaignToOpen(campaign);
+              setCurrentPage('campaigns');
+            }}
           />
         );
       case 'campaigns':
-        return <CampaignList onCreateClick={() => setIsCreatingCampaign(true)} />;
+        return (
+          <CampaignList
+            onCreateClick={() => setIsCreatingCampaign(true)}
+            campaignToOpen={selectedCampaignToOpen}
+            onCampaignOpened={() => setSelectedCampaignToOpen(null)}
+          />
+        );
       case 'detection':
         return (
           <div className="p-4 sm:p-6">

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useGoPhishConfig } from '../gophish/ConfigContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { apiCampaigns, Campaign, CampaignResult, CampaignSummary } from '../../lib/api/client';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -52,9 +54,11 @@ import { AuditTimeline } from '../ui/audit-timeline';
 
 interface CampaignListProps {
   onCreateClick: () => void;
+  campaignToOpen?: Campaign | null;
+  onCampaignOpened?: () => void;
 }
 
-export function CampaignList({ onCreateClick }: CampaignListProps) {
+export function CampaignList({ onCreateClick, campaignToOpen, onCampaignOpened }: CampaignListProps) {
   const { user } = useAuth();
   const { activeConfig } = useGoPhishConfig();
   const { canCreateCampaigns, canDeleteCampaigns, canCompleteCampaigns } = usePermissions();
@@ -118,6 +122,17 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
       loadCampaigns();
     }
   }, [activeConfig?.id]);
+
+  // Abrir automáticamente la campaña si viene desde el Dashboard
+  useEffect(() => {
+    if (campaignToOpen && campaigns.length > 0) {
+      const campaign = campaigns.find(c => c.local_id === campaignToOpen.local_id);
+      if (campaign) {
+        openDetails(campaign);
+        onCampaignOpened?.();
+      }
+    }
+  }, [campaignToOpen, campaigns]);
 
   const handleDelete = async (campaignId: number) => {
     if (!activeConfig?.id || !confirm('¿Estás seguro de que deseas eliminar esta campaña?')) return;
@@ -280,13 +295,350 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
     return true;
   });
 
-  const exitDetails = () => {
-    setDetailMode(false);
-    setSelectedCampaign(null);
-    setSummary(null);
-    setResults([]);
-    setTimeline([]);
-    setDetailsError(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
+
+  const generatePDFForCampaign = async (campaign: Campaign) => {
+    if (!activeConfig?.id) return;
+    
+    try {
+      // Cargar datos necesarios sin abrir la vista de detalles
+      const [summaryResp, resultsResp] = await Promise.all([
+        apiCampaigns.summary(activeConfig.id, campaign.local_id),
+        apiCampaigns.results(activeConfig.id, campaign.local_id)
+      ]);
+      
+      // Generar PDF con los datos cargados
+      await generatePDF(campaign, summaryResp, resultsResp.results || []);
+    } catch (e: any) {
+      console.error('Error generando PDF:', e);
+      setError(e?.message || 'Error al generar PDF');
+    }
+  };
+
+  const generatePDF = async (campaign: Campaign, summaryData?: CampaignSummary, resultsData?: CampaignResult[]) => {
+    if (!activeConfig?.id) return;
+    
+    // Si no se pasan los datos, usar los del estado actual
+    const useSummary = summaryData || summary;
+    const useResults = resultsData || results;
+    
+    if (!useSummary) return;
+    
+    try {
+      setDetailsLoading(true);
+      setDetailsError(null);
+
+      // Obtener plantilla desde la API
+      let template: any = null;
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || '/api'}/templates`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          }
+        });
+        if (response.ok) {
+          const templates = await response.json();
+          template = templates.find((t: any) => t.name === campaign.template_name);
+        }
+      } catch (e) {
+        console.log('No se pudo obtener la plantilla');
+      }
+
+      // Crear contenedor temporal para el PDF
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.position = 'absolute';
+      pdfContainer.style.left = '-9999px';
+      pdfContainer.style.width = '210mm';
+      pdfContainer.style.padding = '0';
+      pdfContainer.style.backgroundColor = 'white';
+      pdfContainer.style.fontFamily = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+      pdfContainer.style.color = '#333';
+      
+      const stats = useSummary.stats || { sent: 0, opened: 0, clicked: 0, email_reported: 0, submitted_data: 0, error: 0, total: 0 };
+      const openRate = calculateRate(stats.opened, stats.sent);
+      const clickRate = calculateRate(stats.clicked, stats.sent);
+      const submittedRate = calculateRate(stats.submitted_data, stats.sent);
+      const reportedRate = calculateRate(stats.email_reported, stats.sent);
+
+      // Usar valores del summary en lugar de contar manualmente
+      const usersWithOpen = stats.opened || 0;
+      const usersWithClick = stats.clicked || 0;
+      const usersWithSubmit = stats.submitted_data || 0;
+
+      pdfContainer.innerHTML = `
+        <style>
+          * {
+            box-sizing: border-box;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+          }
+
+          body {
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 12px;
+          }
+
+          .page {
+            width: 210mm;
+            padding: 16mm;
+          }
+
+          h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+
+          .subtitle {
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 20px;
+          }
+
+          .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+            break-inside: avoid;
+          }
+
+          .card-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #0f172a;
+            margin-bottom: 8px;
+          }
+
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+          }
+
+          .stat {
+            text-align: left;
+          }
+
+          .stat-label {
+            color: #64748b;
+            font-size: 11px;
+          }
+
+          .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 2px;
+          }
+
+          .progress {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 6px;
+          }
+
+          .progress-fill {
+            height: 100%;
+            background: #0f172a;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+          }
+
+          th {
+            text-align: left;
+            color: #64748b;
+            font-weight: 500;
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+          }
+
+          td {
+            padding: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          }
+
+          .badge {
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 500;
+            display: inline-block;
+          }
+
+          .danger {
+            background: #fee2e2;
+            color: #991b1b;
+          }
+
+          .warning {
+            background: #fef3c7;
+            color: #92400e;
+          }
+
+          .success {
+            background: #dcfce7;
+            color: #166534;
+          }
+        </style>
+
+        <div class="page">
+          <h1>${campaign.name}</h1>
+          <div class="subtitle">Informe de campaña - Generado: ${new Date().toLocaleDateString('es-CL')}</div>
+
+          <div class="card">
+            <div class="grid">
+              <div>
+                <div class="stat-label">Estado</div>
+                <div class="stat-value">${translateStatus(campaign.status)}</div>
+              </div>
+              <div>
+                <div class="stat-label">Creada</div>
+                <div class="stat-value">${new Date(useSummary.created_date).toLocaleDateString('es-CL')}</div>
+              </div>
+              <div>
+                <div class="stat-label">Lanzamiento</div>
+                <div class="stat-value">${useSummary.launch_date ? new Date(useSummary.launch_date).toLocaleDateString('es-CL') : '—'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="grid">
+              <div class="stat">
+                <div class="stat-label">Enviados</div>
+                <div class="stat-value">${stats.sent}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Apertura</div>
+                <div class="stat-value">${openRate}%</div>
+                <div class="progress">
+                  <div class="progress-fill" style="width:${openRate}%"></div>
+                </div>
+                <div class="stat-label" style="margin-top: 4px;">${usersWithOpen} de ${stats.sent} emails</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Clicks</div>
+                <div class="stat-value">${clickRate}%</div>
+                <div class="progress">
+                  <div class="progress-fill" style="width:${clickRate}%"></div>
+                </div>
+                <div class="stat-label" style="margin-top: 4px;">${usersWithClick} de ${stats.sent} emails</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="stat">
+              <div class="stat-label">Datos Comprometidos</div>
+              <div class="stat-value">${submittedRate}%</div>
+              <div class="progress">
+                <div class="progress-fill" style="width:${submittedRate}%"></div>
+              </div>
+              <div class="stat-label" style="margin-top: 4px;">${usersWithSubmit} de ${stats.sent} emails</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Resultados</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Nombre</th>
+                  <th>Cargo</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${useResults.map(r => {
+                  const statusLower = (r.status || '').toLowerCase();
+                  let badgeHTML = '<span class="badge success">Enviado</span>';
+                  
+                  if (statusLower.includes('submit')) {
+                    badgeHTML = '<span class="badge danger">Datos enviados</span>';
+                  } else if (statusLower.includes('click')) {
+                    badgeHTML = '<span class="badge warning">Click</span>';
+                  } else if (statusLower.includes('open')) {
+                    badgeHTML = '<span class="badge warning">Abierto</span>';
+                  }
+                  
+                  return `
+                    <tr>
+                      <td>${r.email}</td>
+                      <td>${r.first_name || '—'} ${r.last_name || '—'}</td>
+                      <td>${r.position || '—'}</td>
+                      <td>${badgeHTML}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(pdfContainer);
+
+      // Convertir HTML a canvas
+      const canvas = await html2canvas(pdfContainer, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1280,
+      });
+
+      // Crear PDF desde canvas
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const pxPerMm = canvas.width / pdfWidth;
+      const pageHeightPx = pdfHeight * pxPerMm;
+
+      let y = 0;
+      let page = 0;
+
+      while (y < canvas.height) {
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageHeightPx, canvas.height - y);
+
+        const ctx = pageCanvas.getContext('2d')!;
+        ctx.drawImage(
+          canvas,
+          0, y, canvas.width, pageCanvas.height,
+          0, 0, canvas.width, pageCanvas.height
+        );
+
+        const img = pageCanvas.toDataURL('image/png');
+
+        if (page > 0) pdf.addPage();
+        pdf.addImage(img, 'PNG', 0, 0, pdfWidth, pageCanvas.height / pxPerMm);
+
+        y += pageHeightPx;
+        page++;
+      }
+
+      // Descargar PDF
+      pdf.save(`${campaign.name.replace(/\s+/g, '_')}_informe_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      // Limpiar
+      document.body.removeChild(pdfContainer);
+      setDetailsLoading(false);
+    } catch (e: any) {
+      console.error('Error generando PDF:', e);
+      setDetailsError('Error al generar el PDF: ' + e.message);
+      setDetailsLoading(false);
+    }
   };
 
   const handleComplete = async (campaign: Campaign) => {
@@ -298,7 +650,12 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
       await apiCampaigns.complete(activeConfig.id, campaign.local_id);
       await loadCampaigns();
       if (detailMode && selectedCampaign?.local_id === campaign.local_id) {
-        exitDetails();
+        setDetailMode(false);
+        setSelectedCampaign(null);
+        setSummary(null);
+        setResults([]);
+        setTimeline([]);
+        setDetailsError(null);
       }
     } catch (e: any) {
       setError(e?.message || 'Error al completar campaña');
@@ -526,7 +883,14 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
       <div className="p-4 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="gap-2" onClick={exitDetails}>
+            <Button variant="ghost" size="sm" className="gap-2" onClick={() => {
+              setDetailMode(false);
+              setSelectedCampaign(null);
+              setSummary(null);
+              setResults([]);
+              setTimeline([]);
+              setDetailsError(null);
+            }}>
               <ArrowLeft className="w-4 h-4" />
               Volver
             </Button>
@@ -540,9 +904,13 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Recargar</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)} className="flex-1 sm:flex-none">
+            <Button variant="outline" size="sm" onClick={() => exportResults(selectedCampaign)} disabled={detailsLoading} className="flex-1 sm:flex-none">
               <Download className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Exportar CSV</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => generatePDF(selectedCampaign)} disabled={detailsLoading} className="flex-1 sm:flex-none">
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Exportar PDF</span>
             </Button>
             {canCompleteCampaigns && (
               <Button variant="default" size="sm" onClick={() => handleComplete(selectedCampaign)} className="flex-1 sm:flex-none">
@@ -1116,7 +1484,11 @@ export function CampaignList({ onCreateClick }: CampaignListProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => exportResults(campaign)}>
                               <Download className="w-4 h-4 mr-2" />
-                              Exportar Resultados
+                              Exportar CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => generatePDFForCampaign(campaign)}>
+                              <Download className="w-4 h-4 mr-2" />
+                              Exportar PDF
                             </DropdownMenuItem>
                             {canCompleteCampaigns && (
                               <DropdownMenuItem onClick={() => handleComplete(campaign)}>
