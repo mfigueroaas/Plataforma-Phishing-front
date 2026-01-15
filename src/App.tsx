@@ -21,6 +21,7 @@ import { SecurityDashboard } from './components/security/SecurityDashboard';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { UserManagement } from './components/admin/UserManagement';
 import { AIPhishingDetector } from './components/security/AIPhishingDetector';
+import { UserGuide } from './components/guide/UserGuide';
 
 
 export default function App() {
@@ -184,21 +185,7 @@ export default function App() {
           </div>
         );
       case 'guide':
-        return (
-          <div className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-primary rounded-lg">
-                <BookOpen className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Guía de Usuario</h1>
-                <p className="text-muted-foreground text-sm sm:text-base">
-                  Documentación y tutoriales en desarrollo...
-                </p>
-              </div>
-            </div>
-          </div>
-        );
+        return <UserGuide />;
       case 'api':
         return (
           <div className="p-4 sm:p-6">
